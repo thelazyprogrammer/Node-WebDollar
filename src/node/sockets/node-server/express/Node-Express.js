@@ -1,6 +1,7 @@
 import NodesWaitlist from 'node/lists/waitlist/Nodes-Waitlist'
 
 const https = require('https');
+const compression = require('compression');
 const http = require('http');
 const path = require('path')
 const express = require('express')
@@ -49,6 +50,7 @@ class NodeExpress{
 
             this.app = express();
             this.app.use(cors({ credentials: true }));
+            this.app.use(compression());
 
             try {
                 this.app.use('/.well-known/acme-challenge', express.static('certificates/well-known/acme-challenge'))
