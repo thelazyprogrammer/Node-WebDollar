@@ -307,6 +307,7 @@ class InterfaceBlockchainTransactionFrom {
             }
 
             address.publicKey = BufferExtended.substr(buffer, offset, consts.ADDRESSES.PUBLIC_KEY.LENGTH);
+            address.unencodedAddress = InterfaceBlockchainAddressHelper._generateUnencodedAddressFromPublicKey(address.publicKey)
             offset += consts.ADDRESSES.PUBLIC_KEY.LENGTH;
 
             address.signature = BufferExtended.substr(buffer, offset, consts.TRANSACTIONS.SIGNATURE_SCHNORR.LENGTH);
