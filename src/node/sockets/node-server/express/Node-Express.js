@@ -58,7 +58,7 @@ class NodeExpress{
       console.log(BlockchainGenesis.timeStamp)
       timestamp = timestamp.toUTCString()
       let transactions = []
-      if (raw_block.data.transactions) {
+      if (raw_block.data.transactions && raw_block.data.transactions.transactions) {
         for (let j = 0; j < raw_block.data.transactions.transactions.length; j++) {
           transactions.push(raw_block.data.transactions.transactions[j].toJSON())
         }
@@ -75,7 +75,7 @@ class NodeExpress{
         raw_timestamp: raw_block.timeStamp,
         reward:        raw_block.reward,
         trxs:          transactions,
-        trxs_number:   raw_block.data.transactions.length,
+        trxs_number:   transactions.length,
         version:       raw_block.version
       }
       return block
@@ -279,9 +279,7 @@ class NodeExpress{
 
         // Return address info: balance, blocks mined and transactions
         this.app.get('/address/:address', (req, res) => {
-
             let address = decodeURIComponent(req.params.address);
-
             try {
                 address = InterfaceBlockchainAddressHelper.getUnencodedAddressFromWIF(address);
             } catch (exception){
@@ -293,27 +291,36 @@ class NodeExpress{
             let minedBlocks = []
             let balance = 0
             let last_block = Blockchain.blockchain.blocks.length
-
-            // Get balance
-            balance = Blockchain.blockchain.accountantTree.getBalance(address, undefined);
-            balance = (balance === null) ? 0 : (balance / WebDollarCoins.WEBD);
-
+            try {
+              // Get balance
+              balance = Blockchain.blockchain.accountantTree.getBalance(address, undefined);
+              balance = (balance === null) ? 0 : (balance / WebDollarCoins.WEBD);
+            } catch(exception) {
+                console.log(exception.message)
+                res.send({result: false, message: "Invalid Address"});
+                return;
+            }
+            try {
             // Get mined blocks and transactions
             for (let i=0; i<Blockchain.blockchain.blocks.length; i++) {
+                let trxs_number = 0
+                if (Blockchain.blockchain.blocks[i].data.transactions && Blockchain.blockchain.blocks[i].data.transactions.transactions) {
+                    trxs_number = Blockchain.blockchain.blocks[i].data.transactions.transactions.length
+                }
 
-                for (let j = 0; j < Blockchain.blockchain.blocks[i].data.transactions.transactions.length; j++) {
+                for (let j = 0; j < trxs_number; j++) {
 
                     let transaction = Blockchain.blockchain.blocks[i].data.transactions.transactions[j];
 
                     let found = false;
                     for (let q = 0; q < transaction.from.addresses.length; q++)
-                        if (transaction.from.addresses[q].unencodedAddress.equals(address)) {
+                        if (transaction.from.addresses[q].unencodedAddress && transaction.from.addresses[q].unencodedAddress.equals(address)) {
                             found = true;
                             break;
                         }
 
                     for (let q = 0; q < transaction.to.addresses.length; q++)
-                        if (transaction.to.addresses[q].unencodedAddress.equals(address)) {
+                        if (transaction.to.addresses[q].unencodedAddress && transaction.to.addresses[q].unencodedAddress.equals(address)) {
                             found = true;
                             break;
                         }
@@ -333,9 +340,12 @@ class NodeExpress{
                         {
                             blockId: Blockchain.blockchain.blocks[i].height,
                             timestamp: Blockchain.blockchain.blocks[i].timeStamp + BlockchainGenesis.timeStamp,
-                            transactions: Blockchain.blockchain.blocks[i].data.transactions.transactions.length
+                            transactions: trxs_number
                         });
                 }
+            }
+            } catch (ex) {
+                console.log(ex.message)
             }
 
 
