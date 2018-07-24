@@ -1,5 +1,7 @@
 import consts from 'consts/const_global'
 import BufferExtended from "common/utils/BufferExtended";
+import InterfaceBlockchainTransactionsWizard from "./../../transactions/wizard/Interface-Blockchain-Transactions-Wizard"
+import InterfaceBlockchainAddressHelper from "../../addresses/Interface-Blockchain-Address-Helper";
 
 class MiningTransactionsSelector{
 
@@ -8,7 +10,34 @@ class MiningTransactionsSelector{
         this._transactions = [];
     }
 
-    selectNextTransactions(miningFeeThreshold){
+    validateTransaction(transaction, miningFeePerByte){
+
+        //don't upset the SPAM_GUARDIAN
+        for (let j = 0; j < transaction.from.addresses.length; j++) {
+            if (this._countAddresses(transaction.from.addresses[j].unencodedAddress, true, false) + 1 > consts.SPAM_GUARDIAN.TRANSACTIONS.MAXIMUM_IDENTICAL_INPUTS)
+                throw {message: "too many inputs", from: transaction.from.addresses[j]};
+        }
+
+        for (let j = 0; j < transaction.to.addresses.length; j++) {
+            if (this._countAddresses(transaction.to.addresses[j].unencodedAddress, false, true) + 1 > consts.SPAM_GUARDIAN.TRANSACTIONS.MAXIMUM_IDENTICAL_OUTPUTS)
+                throw {message: "too many outputs", from: transaction.to.addresses[j]};
+
+        }
+
+        //validating its own transaction
+        if (transaction.from.addresses[0].unencodedAddress.equals( this.blockchain.mining.unencodedMinerAddress ) )
+            return true;
+
+        //verify fee
+        if (transaction.fee < this.blockchain.transactions.wizard.calculateFeeWizzard(transaction.serializeTransaction(), miningFeePerByte ) )
+            throw {message: "fee is too small"};
+
+        return true;
+
+
+    }
+
+    selectNextTransactions(miningFeePerByte){
 
         this._transactions = [];
 
@@ -21,17 +50,9 @@ class MiningTransactionsSelector{
 
             try {
                 
-                console.log(transaction.txId.toString("hex"));
+                console.log(transaction.txId.toString("hex"), InterfaceBlockchainAddressHelper.generateAddressWIF(transaction.from.addresses[0].unencodedAddress, false, true) );
 
-                //don't upset the SPAM_GUARDIAN
-                for (let j = 0; j < transaction.from.addresses.length; j++)
-                    if (this._countAddresses(transaction.from.addresses[j].unencodedAddress, true, false) + 1 > consts.SPAM_GUARDIAN.TRANSACTIONS.MAXIMUM_IDENTICAL_INPUTS)
-                        throw {message: "too many inputs"};
-
-                for (let j = 0; j < transaction.to.addresses.length; j++)
-                    if (this._countAddresses(transaction.to.addresses[j].unencodedAddress, false, true) + 1 > consts.SPAM_GUARDIAN.TRANSACTIONS.MAXIMUM_IDENTICAL_OUTPUTS)
-                        throw {message: "too many outputs"};
-
+                this.validateTransaction(transaction, miningFeePerByte);
 
                 let bRemoveTransaction = false;
 
@@ -44,16 +65,15 @@ class MiningTransactionsSelector{
                         }
                     };
 
-                    if (transaction.fee >= miningFeeThreshold)
-                        if ( transaction.validateTransactionEveryTime(this.blockchain.blocks.length,  blockValidationType )) {
+                    if ( transaction.validateTransactionEveryTime(this.blockchain.blocks.length,  blockValidationType )) {
 
-                            size -= transaction.serializeTransaction().length;
+                        size -= transaction.serializeTransaction().length;
 
-                            if (size >= 0)
-                                this._transactions.push(transaction);
+                        if (size >= 0)
+                            this._transactions.push(transaction);
 
-                        } else
-                            bRemoveTransaction = true;
+                    } else
+                        bRemoveTransaction = true;
 
 
 
@@ -72,6 +92,8 @@ class MiningTransactionsSelector{
             }
 
 
+            if (this._transactions.length > 60)
+                break;
 
             i++;
         }

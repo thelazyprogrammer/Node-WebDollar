@@ -11,6 +11,7 @@ import StatusEvents from "common/events/Status-Events";
 import InterfaceBlockchainAddressHelper from 'common/blockchain/interface-blockchain/addresses/Interface-Blockchain-Address-Helper'
 import AdvancedMessages from "node/menu/Advanced-Messages";
 import consts from "consts/const_global"
+import Log from 'common/utils/logging/Log';
 
 class MinerProtocol extends PoolProtocolList{
 
@@ -121,7 +122,7 @@ class MinerProtocol extends PoolProtocolList{
 
                 ref: this.minerPoolManagement.minerPoolSettings.poolReferral !== '' ? this.minerPoolManagement.minerPoolSettings.poolReferral : undefined,
 
-            }, "answer", 16000  );
+            }, "answer", 30000  );
 
 
             if (answer === null ) throw {message: "pool : didn't respond"}; //in case there was an error message
@@ -156,8 +157,8 @@ class MinerProtocol extends PoolProtocolList{
 
                 if (! ed25519.verify(answer.signature, newMessage, this.minerPoolManagement.minerPoolSettings.poolPublicKey)) throw {message: "pool: signature doesn't validate message"};
 
-                if ( typeof answer.reward !== "number") throw {message: "pool: Reward is empty"};
-                if ( typeof answer.confirmed !== "number") throw {message: "pool: confirmedReward is empty"};
+                //if ( typeof answer.reward !== "number") throw {message: "pool: Reward is empty"};
+                //if ( typeof answer.confirmed !== "number") throw {message: "pool: confirmedReward is empty"};
 
                 socket.node.sendRequest("mining-pool/hello-pool/answer/confirmation", {result: true});
 
@@ -177,6 +178,7 @@ class MinerProtocol extends PoolProtocolList{
                 await this._connectionEstablishedWithPool(socket);
 
                 this._updateStatistics(answer);
+
                 this.minerPoolManagement.minerPoolReward.setReward(answer);
 
                 return true;
@@ -277,7 +279,9 @@ class MinerProtocol extends PoolProtocolList{
         if (typeof data.m === "number") this.minerPoolManagement.minerPoolStatistics.poolMinersOnline = data.m;
         if (typeof data.h === "number") this.minerPoolManagement.minerPoolStatistics.poolHashes = data.h;
         if (typeof data.b === "number") this.minerPoolManagement.minerPoolStatistics.poolBlocksConfirmed = data.b;
+        if (typeof data.bp === "number") this.minerPoolManagement.minerPoolStatistics.poolBlocksConfirmedAndPaid = data.bp;
         if (typeof data.ub === "number") this.minerPoolManagement.minerPoolStatistics.poolBlocksUnconfirmed = data.ub;
+        if (typeof data.bc === "number") this.minerPoolManagement.minerPoolStatistics.poolBlocksBeingConfirmed = data.bc;
         if (typeof data.t === "number") this.minerPoolManagement.minerPoolStatistics.poolTimeRemaining = data.t;
         if (typeof data.n === "number") Blockchain.blockchain.blocks.networkHashRate = data.n; //network hash rate
     }
@@ -306,10 +310,12 @@ class MinerProtocol extends PoolProtocolList{
 
         try {
 
+            Log.info("Push Work: ("+miningAnswer.nonce+")"+ miningAnswer.hash.toString("hex") , Log.LOG_TYPE.POOLS);
+
             if (poolSocket === undefined)
                 poolSocket = this.connectedPools[0];
 
-            if (poolSocket === null || poolSocket === undefined) throw {message: "poolSocket is null"};
+            if (poolSocket === null || poolSocket === undefined) throw {message: "You are disconnected"};
 
             let answer = await poolSocket.node.sendRequestWaitOnce("mining-pool/work-done", {
                 work: miningAnswer,
@@ -347,7 +353,7 @@ class MinerProtocol extends PoolProtocolList{
             if (newAddress === undefined)
                 newAddress = Blockchain.Wallet.addresses[0].address;
 
-            if (poolSocket === null || poolSocket === undefined) throw {message: "poolSocket is null"};
+            if (poolSocket === null || poolSocket === undefined) throw {message: "You are disconnected"};
 
             oldAddress = Blockchain.Wallet.getAddress(oldAddress||this.minerPoolManagement.minerPoolMining.minerAddress);
 
@@ -415,7 +421,7 @@ class MinerProtocol extends PoolProtocolList{
             if (poolSocket === undefined)
                 poolSocket = this.connectedPools[0];
 
-            if (poolSocket === null || poolSocket === undefined) throw {message: "poolSocket is null"};
+            if (poolSocket === null || poolSocket === undefined) throw {message: "You are disconnected"};
 
             let answer = await poolSocket.node.sendRequestWaitOnce("mining-pool/request-wallet-mining", {}, "answer", 6000);
 

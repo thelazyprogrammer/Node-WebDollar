@@ -1,5 +1,4 @@
 var BigInteger = require('big-integer');
-import WebDollarCryptoData from 'common/crypto/WebDollar-Crypto-Data'
 import WebDollarCrypto from 'common/crypto/WebDollar-Crypto'
 import BlockchainGenesis from 'common/blockchain/global/Blockchain-Genesis'
 import BlockchainMiningReward from 'common/blockchain/global/Blockchain-Mining-Reward'
@@ -35,6 +34,8 @@ class InterfaceBlockchainBlock {
             if (timeStamp === undefined || timeStamp === null)
                 timeStamp = ( new Date().getTime() - BlockchainGenesis.timeStampOffset) / 1000;
 
+            timeStamp += Math.floor( Math.random()*5  * (Math.random() < 0.5 ?  -1 : 1  ));
+
         }
 
         this.timeStamp = timeStamp||null; //Current timestamp as seconds since 1970-01-01T00:00 UTC        - 4 bytes,
@@ -64,6 +65,8 @@ class InterfaceBlockchainBlock {
         this.db = db;
 
         this._socketPropagatedBy = undefined;
+
+        this._workDone = undefined;
 
     }
 
@@ -345,7 +348,7 @@ class InterfaceBlockchainBlock {
             this.hash = BufferExtended.substr(buffer, offset, consts.BLOCKCHAIN.BLOCKS_POW_LENGTH);
             offset += consts.BLOCKCHAIN.BLOCKS_POW_LENGTH;
 
-            this.nonce = Serialization.deserializeNumber4Bytes( BufferExtended.substr(buffer, offset, 4) );
+            this.nonce = Serialization.deserializeNumber4Bytes( buffer, offset, );
             offset += 4;
 
 
@@ -358,7 +361,7 @@ class InterfaceBlockchainBlock {
             offset += consts.BLOCKCHAIN.BLOCKS_POW_LENGTH;
 
 
-            this.timeStamp = Serialization.deserializeNumber4Bytes( BufferExtended.substr(buffer, offset, 4) );
+            this.timeStamp = Serialization.deserializeNumber4Bytes( buffer, offset);
             offset += 4;
 
             offset = this.data.deserializeData(buffer, offset);
@@ -496,6 +499,18 @@ class InterfaceBlockchainBlock {
         socket.on("disconnect",()=>{
            this._socketPropagatedBy = undefined;
         });
+
+    }
+
+    /**
+     *
+     */
+    get workDone(){
+
+        if (this._workDone) return this._workDone;
+
+        this._workDone = consts.BLOCKCHAIN.BLOCKS_MAX_TARGET_BIG_INTEGER.divide( new BigInteger( this.hash.toString("hex"), 16 ) );
+        return this._workDone;
 
     }
 

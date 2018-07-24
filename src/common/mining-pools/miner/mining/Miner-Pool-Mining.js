@@ -45,6 +45,9 @@ class MinerPoolMining extends InheritedPoolMining {
 
         this._isBeingMining = false;
 
+        if (this._workers !== undefined)
+            this._workers._in_pool = true;
+
     }
 
     _startMinerPoolMining(){
@@ -106,6 +109,8 @@ class MinerPoolMining extends InheritedPoolMining {
             this.resetForced = true;
         }
 
+        Log.info("New Work: "+ work.start + " : " + work.end, Log.LOG_TYPE.POOLS );
+
     }
 
 
@@ -127,6 +132,9 @@ class MinerPoolMining extends InheritedPoolMining {
                     this._isBeingMining = true;
                     let answer = await this._run();
                     this._isBeingMining = false;
+
+                    if (answer === null)
+                        continue;
 
                     answer.timeDiff = new Date().getTime() - timeInitial;
 
@@ -158,7 +166,7 @@ class MinerPoolMining extends InheritedPoolMining {
             if (this._miningWork.end === undefined) throw {message: "end is undefined"};
             if (this._miningWork.difficultyTarget === undefined) throw {message: "difficultyTarget is undefined"};
 
-            let answer = await this.mine(this._miningWork.block, this._miningWork.difficultyTarget, this._miningWork.start, this._miningWork.end, this._miningWork.difficultyTarget );
+            let answer = await this.mine(this._miningWork.block, this._miningWork.difficultyTarget, this._miningWork.start, this._miningWork.end, this._miningWork.height,  );
 
             return answer;
 
@@ -178,6 +186,7 @@ class MinerPoolMining extends InheritedPoolMining {
                 await this.minerPoolManagement.minerPoolProtocol.requestWork();
 
             if (!this.started) this._poolFailTrials = 0;
+
             if (this.started && this._hashesPerSecond === 0 ){
                 this._poolFailTrials ++;
 
@@ -188,7 +197,8 @@ class MinerPoolMining extends InheritedPoolMining {
                     this._poolFailTrials = 0;
                 }
 
-            }
+            } else
+                this._poolFailTrials = 0;
 
         } catch (exception){
 

@@ -90,6 +90,8 @@ class InterfaceBlockchainProtocolForkSolver{
             return binarySearchResult;
         }
 
+
+
     }
 
 
@@ -106,7 +108,6 @@ class InterfaceBlockchainProtocolForkSolver{
         let currentBlockchainLength = this.blockchain.blocks.length;
 
         let fork, forkFound;
-        let headers = [forkLastBlockHash];
 
         try{
 
@@ -124,16 +125,17 @@ class InterfaceBlockchainProtocolForkSolver{
             if ( currentBlockchainLength >= count && ( forkChainLength >= currentBlockchainLength ||  (this.blockchain.agent.light && forkProof) )  )
                 for (let i = currentBlockchainLength-1; i >= currentBlockchainLength-1-count; i--){
 
-                    if (i === currentBlockchainLength-1)
+
+                    if (i === forkChainLength-1 && forkLastBlockHash !== undefined && forkLastBlockHash !== undefined) {
                         answer = {hash: forkLastBlockHash};
-                    else {
+                    } else {
                         answer = await socket.node.sendRequestWaitOnce( "head/hash", i, i, consts.SETTINGS.PARAMS.CONNECTIONS.TIMEOUT.WAIT_ASYNC_DISCOVERY_TIMEOUT );
-                        if (answer === null || answer.hash === undefined)
+                        if (answer === null || answer === undefined || answer.hash === undefined)
                             continue;
                     }
 
 
-                    console.log("_forkSolver_checking", i, currentBlockchainLength);
+                    console.log("_forkSolver_checking", i, currentBlockchainLength-1);
 
 
                     forkFound = this.blockchain.forksAdministrator._findForkyByHeader( answer.hash );
@@ -141,7 +143,7 @@ class InterfaceBlockchainProtocolForkSolver{
                     if (forkFound !== null && forkFound !== fork) {
                         if (Math.random() < 0.01) console.error("discoverAndProcessFork - fork already found by n-2");
 
-                        forkFound.pushHeader( forkLastBlockHash ); //this lead to a new fork
+                        forkFound.pushHeaders( fork.forkHeaders ); //this lead to a new fork
                         forkFound.pushSocket(socket, forkProof);
 
                         this.blockchain.forksAdministrator.deleteFork(fork); //destroy fork
@@ -150,20 +152,17 @@ class InterfaceBlockchainProtocolForkSolver{
                     }
 
 
+                    fork.pushHeader(answer.hash);
 
                     if (this.blockchain.blocks[i].hash.equals(answer.hash)){
 
                         binarySearchResult = {
-                            position: i,
+                            position: (i === currentBlockchainLength-1)  ? currentBlockchainLength :  i+1,
                             header: answer.hash,
                         };
 
-                        fork.pushHeader(binarySearchResult.header);
+
                         break;
-
-                    } else {
-
-                        fork.pushHeader(answer.hash);
 
                     }
 
@@ -241,6 +240,7 @@ class InterfaceBlockchainProtocolForkSolver{
             }
 
 
+
             return {result: true, fork:fork };
 
         } catch ( exception ){
@@ -302,7 +302,7 @@ class InterfaceBlockchainProtocolForkSolver{
 
             // TODO you can paralyze the downloading code from multiple sockets
 
-            console.log("nextBlockHeight", nextBlockHeight);
+            console.log("downloading block", nextBlockHeight);
 
             StatusEvents.emit( "agent/status", {message: "Synchronizing - Downloading Block", blockHeight: nextBlockHeight, blockHeightMax: fork.forkChainLength } );
 
@@ -327,7 +327,9 @@ class InterfaceBlockchainProtocolForkSolver{
             let blockValidation = fork._createBlockValidation_ForkValidation(nextBlockHeight, fork.forkBlocks.length-1);
             let block = this._deserializeForkBlock(fork, answer.block, nextBlockHeight, blockValidation );
 
-            if (!fork.downloadAllBlocks) await this.blockchain.sleep(15);
+            //console.log("block.hash", block.hash.toString("hex"));
+
+            if (fork.downloadAllBlocks && nextBlockHeight % 10 === 0) await this.blockchain.sleep(15);
 
             let result;
 
@@ -352,7 +354,7 @@ class InterfaceBlockchainProtocolForkSolver{
             else
                 throw {message: "Fork didn't work at height ", nextBlockHeight};
 
-            if (!fork.downloadAllBlocks) await this.blockchain.sleep(30);
+            if (fork.downloadAllBlocks && nextBlockHeight % 10 === 0) await this.blockchain.sleep(15);
 
         }
 

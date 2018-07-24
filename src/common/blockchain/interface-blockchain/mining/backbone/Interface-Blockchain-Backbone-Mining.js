@@ -1,4 +1,5 @@
 import InterfaceBlockchainMining from "../Interface-Blockchain-Mining";
+import Workers from './Workers';
 import consts from 'consts/const_global'
 
 class InterfaceBlockchainBackboneMining extends InterfaceBlockchainMining {
@@ -6,9 +7,9 @@ class InterfaceBlockchainBackboneMining extends InterfaceBlockchainMining {
 
     //backbone mining is the same with InterfaceBlockchainMining
 
-    constructor(blockchain, minerAddress, miningFeeThreshold){
+    constructor(blockchain, minerAddress, miningFeePerByte){
 
-        super(blockchain, minerAddress, miningFeeThreshold);
+        super(blockchain, minerAddress, miningFeePerByte);
 
         this.WORKER_NONCES_WORK = 700;
 
@@ -17,6 +18,8 @@ class InterfaceBlockchainBackboneMining extends InterfaceBlockchainMining {
         this._workerResolve = undefined;
 
         this.end = 0;
+
+        this._workers = new Workers(this);
     }
 
     async _mineNonces(start, end){
@@ -53,7 +56,17 @@ class InterfaceBlockchainBackboneMining extends InterfaceBlockchainMining {
 
     }
 
-    async mine(block, difficulty, start, end){
+    async _mineNoncesWithWorkers(start, end) {
+        let promiseResolve = new Promise((resolve) => {
+            this._workerResolve = resolve;
+
+            this._workers.run(start, end);
+        });
+
+        return promiseResolve;
+    }
+
+    async mine(block, difficulty, start, end,){
 
         this.block = block;
         this.difficulty = difficulty;
@@ -62,6 +75,11 @@ class InterfaceBlockchainBackboneMining extends InterfaceBlockchainMining {
         this.bestHash = consts.BLOCKCHAIN.BLOCKS_MAX_TARGET_BUFFER;
         this.bestHashNonce = -1;
 
+        // multi threading
+        if (this._workers.haveSupport())
+            return await this._mineNoncesWithWorkers(start, end);
+
+        // solo
         return await this._mineNonces(start, start + this.WORKER_NONCES_WORK);
 
     }

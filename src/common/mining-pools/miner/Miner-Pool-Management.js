@@ -7,6 +7,7 @@ import MinerPoolProtocol from "common/mining-pools/miner/protocol/Miner-Pool-Pro
 import MinerPoolSettings from "common/mining-pools/miner/Miner-Pool-Settings"
 import StatusEvents from "common/events/Status-Events";
 import Blockchain from "main-blockchain/Blockchain";
+import NodesList from 'node/lists/Nodes-List'
 
 class MinerProtocol {
 
@@ -40,10 +41,16 @@ class MinerProtocol {
 
     async startMinerPool(poolURL, forceStartMinerPool = false ){
 
+        if ( poolURL === false){
+            await this.setMinerPoolStarted(false);
+            return;
+        }
+
         if (poolURL !== undefined)
             await this.minerPoolSettings.setPoolURL(poolURL);
 
         if (this.minerPoolSettings.poolURL !== undefined && this.minerPoolSettings.poolURL !== '') {
+            this._minerPoolStarted = false;
             return await this.setMinerPoolStarted(true, forceStartMinerPool);
         }
         else {
@@ -91,6 +98,8 @@ class MinerProtocol {
 
             await this.minerPoolSettings.setMinerPoolActivated(value);
 
+            NodesList.disconnectAllNodes("all");
+
             if (value) {
 
                 Blockchain.blockchain.miningSolo.stopMining();
@@ -99,6 +108,9 @@ class MinerProtocol {
                 Blockchain.Mining = this.minerPoolMining;
 
                 this.blockchain.agent.consensus = false;
+
+                if (this.blockchain.prover !== undefined)
+                    this.blockchain.prover.proofActivated = false;
 
                 await this.minerPoolProtocol.insertServersListWaitlist( this.minerPoolSettings.poolServers );
                 await this.minerPoolProtocol._startMinerProtocol();
@@ -116,9 +128,15 @@ class MinerProtocol {
                 await this.minerPoolProtocol._stopMinerProtocol();
                 await this.minerPoolMining._stopMinerPoolMining();
 
+                this.blockchain.blocks.length  = 0;
                 this.blockchain.agent.consensus = true;
 
+
+                if (this.blockchain.prover !== undefined)
+                    this.blockchain.prover.proofActivated = true;
+
                 consts.MINING_POOL.MINING_POOL_STATUS = consts.MINING_POOL_TYPE.MINING_POOL_DISABLED;
+
             }
 
             StatusEvents.emit("miner-pool/status", {result: value, message: "Miner Pool Started changed" });

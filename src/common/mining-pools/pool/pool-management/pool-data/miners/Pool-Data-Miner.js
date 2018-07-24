@@ -20,8 +20,6 @@ class PoolDataMiner{
         this._rewardConfirmedOther = 0;   //other money confirmed to be sent
         this._rewardSent = 0;             //rewardSent
 
-        this.dateActivity = new Date().getTime();
-
         this.referrals = new PoolDataMinerReferrals( poolData, this  );
 
     }
@@ -91,7 +89,7 @@ class PoolDataMiner{
 
     deserializeMiner( buffer, offset ){
 
-        let version =  Serialization.deserializeNumber( BufferExtended.substr( buffer, offset, 1 ) );
+        let version =  Serialization.deserializeNumber1Bytes( buffer, offset, );
         offset += 1;
 
         this.address = BufferExtended.substr( buffer, offset, consts.ADDRESSES.ADDRESS.LENGTH );
@@ -102,12 +100,12 @@ class PoolDataMiner{
             offset += 7;
         }
 
-        this.rewardConfirmedOther = Serialization.deserializeNumber7Bytes( BufferExtended.substr( buffer, offset, 7 ) );
+        this.rewardConfirmedOther = Serialization.deserializeNumber7Bytes( buffer, offset, );
         offset += 7;
 
         if (this.rewardConfirmedOther > 100000000) this.rewardConfirmedOther = 0;
 
-        this.rewardSent = Serialization.deserializeNumber7Bytes( BufferExtended.substr( buffer, offset, 7 ) );
+        this.rewardSent = Serialization.deserializeNumber7Bytes( buffer, offset, );
         offset += 7;
 
         this.instances = [];
@@ -115,7 +113,7 @@ class PoolDataMiner{
         //TODO: to be removed
         if (version === 0x02) {
 
-            let len = Serialization.deserializeNumber(BufferExtended.substr(buffer, offset, 4));
+            let len = Serialization.deserializeNumber4Bytes( buffer, offset, );
             offset += 4;
 
             this.publicKeys = [];

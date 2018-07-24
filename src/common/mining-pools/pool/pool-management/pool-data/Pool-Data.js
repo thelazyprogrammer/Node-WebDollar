@@ -28,7 +28,7 @@ class PoolData {
 
     async initializePoolData(){
 
-        await this._loadPoolData();
+        return await this._loadPoolData();
 
     }
 
@@ -38,6 +38,16 @@ class PoolData {
             this.addBlockInformation();
 
         return this.blocksInfo[this.blocksInfo.length-1];
+    }
+
+    get confirmedBlockInformations(){
+
+        let blocksConfirmed = [];
+        for (let i=0; i<this.blocksInfo.length; i++)
+            if (this.blocksInfo[i].confirmed && !this.blocksInfo[i].payout)
+                blocksConfirmed.push(this.blocksInfo[i]);
+
+        return blocksConfirmed;
     }
 
     updateRewards(){
@@ -166,7 +176,7 @@ class PoolData {
 
         try {
 
-            let numMiners = Serialization.deserializeNumber( BufferExtended.substr( buffer, offset, 4 ) );
+            let numMiners = Serialization.deserializeNumber4Bytes( buffer, offset );
             offset += 4;
 
             this.miners = [];
@@ -207,7 +217,7 @@ class PoolData {
 
         try {
 
-            let numBlocksInformation = Serialization.deserializeNumber( BufferExtended.substr( buffer, offset, 4 ) );
+            let numBlocksInformation = Serialization.deserializeNumber4Bytes( buffer, offset, );
             offset += 4;
 
             this.blocksInfo = [];

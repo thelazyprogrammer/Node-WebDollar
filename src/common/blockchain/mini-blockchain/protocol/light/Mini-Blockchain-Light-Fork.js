@@ -186,9 +186,9 @@ class MiniBlockchainLightFork extends MiniBlockchainFork {
         return MiniBlockchainFork.prototype.revertFork.call(this);
     }
 
-    async saveIncludeBlock(index, revertActions){
+    async saveIncludeBlock(index, revertActions, saveBlock = false){
 
-        let answer = await MiniBlockchainFork.prototype.saveIncludeBlock.call(this, index, revertActions);
+        let answer = await MiniBlockchainFork.prototype.saveIncludeBlock.call(this, index, revertActions, saveBlock );
 
         if (answer){
 
@@ -197,6 +197,17 @@ class MiniBlockchainLightFork extends MiniBlockchainFork {
         }
 
         return answer;
+    }
+
+    async _validateFork(validateHashesAgain, firstValidation, validateChainWork = true ){
+
+        if (this.blockchain.blocks.blocksStartingPoint >= this.forkStartingHeight)
+            validateChainWork = true;
+        else
+            validateChainWork = false;
+
+        MiniBlockchainFork.prototype._validateFork.call(this, validateHashesAgain, firstValidation, validateChainWork);
+
     }
 
 }

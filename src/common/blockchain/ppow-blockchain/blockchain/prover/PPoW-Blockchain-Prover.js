@@ -48,11 +48,12 @@ class PPoWBlockchainProver{
             if (chainLength - consts.POPOW_PARAMS.k >= 0)
                 for (let miu = chain.blocks[chainLength - consts.POPOW_PARAMS.k].interlink.length; miu >= 0; --miu) {
 
-                    //  α ← C[: −k]{B :}↑µ
-                    //  α is superChain
+                    // //  α ← C[: −k]{B :}↑µ
+                    // //  α is superChain
                     let superChain = new PPowBlockchainProofPi(this.blockchain, []);
 
-                    // // //C[: −k]{B :}
+                    //
+                    // C[: −k]{B :}
                     // for (let level = miu; level <=32; level++){
                     //
                     //     //C[: −k] ↑µ
@@ -152,9 +153,8 @@ class PPoWBlockchainProver{
         if ( !this.proofActivated )
             return false;
 
-        if (this.proofPi !== undefined){
+        if (this.proofPi !== undefined)
             this.proofPi.destroyProof();
-        }
 
         this.proofPi = await this._createProofPi(this.blockchain);
 

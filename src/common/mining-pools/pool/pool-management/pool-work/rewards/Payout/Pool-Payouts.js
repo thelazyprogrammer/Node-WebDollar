@@ -7,8 +7,10 @@ import StatusEvents from "common/events/Status-Events";
 import consts from 'consts/const_global'
 import BlockchainMiningReward from 'common/blockchain/global/Blockchain-Mining-Reward';
 
-const PAYOUT_INTERVAL = consts.DEBUG ? 5 : 30 + Math.floor( Math.random()*10 ); //in blocks;
-const PAYOUT_MINIMUM  = consts.MINING_POOL.MINING.FEE_THRESHOLD;
+import WebDollarCoins from "common/utils/coins/WebDollar-Coins"
+
+const PAYOUT_INTERVAL = consts.DEBUG ? 5 : 40 + Math.floor( Math.random()*10 ); //in blocks;
+
 
 class PoolPayouts{
 
@@ -20,17 +22,14 @@ class PoolPayouts{
         this.blockchain = blockchain;
         this._payoutInProgress = false;
 
-        StatusEvents.on("blockchain/blocks-count-changed", async (data)=>{
+        StatusEvents.on("blockchain/block-inserted", async (data)=>{
 
             if (!this.poolManagement._poolStarted) return;
             if (!Blockchain.loaded) return;
 
             Log.info("Next Payout in " + ( PAYOUT_INTERVAL - (this.blockchain.blocks.length % PAYOUT_INTERVAL))+"  blocks", Log.LOG_TYPE.POOLS );
 
-            let blocksConfirmed = [];
-            for (let i=0; i<this.poolData.blocksInfo.length; i++)
-                if (this.poolData.blocksInfo[i].confirmed && !this.poolData.blocksInfo[i].payout)
-                    blocksConfirmed.push(this.poolData.blocksInfo[i]);
+            let blocksConfirmed = this.poolData.confirmedBlockInformations;
 
             Log.info("Next Payout - Blocks confirmed: " + blocksConfirmed.length, Log.LOG_TYPE.POOLS );
 
@@ -149,7 +148,7 @@ class PoolPayouts{
             //add rewardConfirmedOther
             this.poolData.miners.forEach((miner)=>{
 
-                if ( miner.__tempRewardConfirmedOther + miner.rewardConfirmedOther >= PAYOUT_MINIMUM )
+                if ( miner.__tempRewardConfirmedOther + miner.rewardConfirmedOther >= consts.MINING_POOL.MINING.MINING_POOL_MINIMUM_PAYOUT )
                     this._addAddressTo(miner.address).amount += miner.__tempRewardConfirmedOther +miner.rewardConfirmedOther ;
 
             });
@@ -164,13 +163,21 @@ class PoolPayouts{
             for (let i=0; i < this._toAddresses.length; i++)
                 this._toAddresses[i].amount = Math.floor( this._toAddresses[i].amount );
 
+            this._removeAddressTo(this.blockchain.mining.unencodedMinerAddress);
+
+            let totalToPay = 0;
+            for (let i=0; i< this._toAddresses.length; i++ ){
+                totalToPay += this._toAddresses[i].amount;
+            }
+            Log.info("Payout Total To Pay: " + (totalToPay / WebDollarCoins.WEBD), Log.LOG_TYPE.POOLS);
+
             let index = 0;
             while (index * 256 < this._toAddresses.length) {
 
                 let toAddresses = this._toAddresses.slice(index*255, (index+1)*255);
 
                 try {
-                    let transaction = await Blockchain.Transactions.wizard.createTransactionSimple(this.blockchain.mining.minerAddress, toAddresses, undefined, consts.MINING_POOL.MINING.FEE_THRESHOLD,);
+                    let transaction = await Blockchain.Transactions.wizard.createTransactionSimple(this.blockchain.mining.minerAddress, toAddresses, undefined, 0, );
                     if (!transaction.result) throw {message: "Transaction was not made"};
                 } catch (exception){
                     Log.error("Payout: ERROR CREATING TRANSACTION", Log.LOG_TYPE.POOLS);
@@ -235,7 +242,7 @@ class PoolPayouts{
 
             }
 
-            Log.info("Payout Total Paid "+total, Log.LOG_TYPE.POOLS)
+            Log.info("Payout Total Paid "+ (total / WebDollarCoins.WEBD), Log.LOG_TYPE.POOLS)
 
 
         } catch (exception){
@@ -252,13 +259,13 @@ class PoolPayouts{
 
     }
 
-    _findAddressTo(address){
+    _findAddressTo(address, returnPos = false){
 
         for (let q=0; q<this._toAddresses.length; q++)
             if (this._toAddresses[q].address.equals( address ))
-                return this._toAddresses[q];
+                return returnPos ? q : this._toAddresses[q];
 
-        return null;
+        return returnPos ? -1 : null;
 
     }
 
@@ -277,6 +284,14 @@ class PoolPayouts{
         this._toAddresses.push(object);
 
         return object;
+
+    }
+
+    _removeAddressTo(address){
+
+        let index = this._findAddressTo(address, true);
+        if (index !== -1)
+            this._toAddresses.splice(index);
 
     }
 

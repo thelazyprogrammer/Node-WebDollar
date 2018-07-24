@@ -54,7 +54,7 @@ class PoolWorkManagement{
 
         minerInstance.lastBlockInformation =  blockInformationMinerInstance;
         minerInstance.workBlock =  this.poolWork.lastBlock;
-        minerInstance.miner.dateActivity = new Date().getTime();
+        minerInstance.dateActivity = new Date().getTime()/1000;
 
         this.poolWork.lastBlockNonce += hashes;
 
@@ -66,6 +66,7 @@ class PoolWorkManagement{
             answer.sig = this.poolManagement.poolSettings.poolDigitalSign(message);
 
         }
+
 
         return answer;
 
@@ -95,7 +96,7 @@ class PoolWorkManagement{
                 hashesFactor = Math.max(0.2, hashesFactor);
 
                 let hashesPerSecond = Math.floor( minerInstance.hashesPerSecond * hashesFactor);
-                minerInstance.hashesPerSecond = Math.max( 100, Math.min( hashesPerSecond, 400000 ));
+                minerInstance.hashesPerSecond = Math.max( 100, Math.min( hashesPerSecond, 3000000 ));
 
             }
 
@@ -110,12 +111,6 @@ class PoolWorkManagement{
                 console.log("Work: ", work);
 
             if ( work.result && prevBlock === undefined ) { //it is a solution and prevBlock is undefined
-
-                console.warn("----------------------------------------------------------------------------");
-                console.warn("----------------------------------------------------------------------------");
-                console.warn("WebDollar Block was mined in Pool 1 ", blockInformationMinerInstance.workBlock.height, work.hash.toString("hex"), "nonce", work.nonce );
-                console.warn("----------------------------------------------------------------------------");
-                console.warn("----------------------------------------------------------------------------");
 
                 if ( await blockInformationMinerInstance.wasBlockMined() ){
 
@@ -138,10 +133,13 @@ class PoolWorkManagement{
                         blockInformationMinerInstance.workBlock.hash = blockInformationMinerInstance.workHash;
                         blockInformationMinerInstance.workBlock.nonce = blockInformationMinerInstance.workHashNonce;
 
-                        let serialization = blockInformationMinerInstance.workBlock.serializeBlock();
-                        block = this.blockchain.blockCreator.createEmptyBlock(blockInformationMinerInstance.workBlock.height, undefined );
-                        block.deserializeBlock(serialization, blockInformationMinerInstance.workBlock.height, blockInformationMinerInstance.workBlock.reward,  );
+                        let workBlock = blockInformationMinerInstance.workBlock;
 
+                        let serialization = blockInformationMinerInstance.workBlock.serializeBlock();
+                        block = this.blockchain.blockCreator.createEmptyBlock(workBlock.height, undefined );
+                        block.deserializeBlock(serialization, workBlock.height, workBlock.reward,  );
+
+                        let blockInformation = blockInformationMinerInstance.blockInformation;
 
                         if (await this.blockchain.semaphoreProcessing.processSempahoreCallback(async () => {
 
@@ -159,7 +157,12 @@ class PoolWorkManagement{
                         block.data.transactions.confirmTransactions();
 
 
-                        blockInformationMinerInstance.blockInformation.block = blockInformationMinerInstance.workBlock;
+                        try {
+                            blockInformation.block = workBlock;
+                        } catch (exception){
+
+                        }
+
                         this.poolManagement.poolData.addBlockInformation();
 
 

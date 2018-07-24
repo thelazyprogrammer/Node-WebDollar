@@ -64,7 +64,7 @@ class MinerPoolSettings {
         if (url.indexOf("/r/", url) >= 0)
             url = url.substr(0, url.indexOf("/r/", url));
 
-        this.poolURLReferral =  ( process.env.BROWSER ? window.location.origin : "https://webdollar.ddns.net:9094"  ) + "/pool/"+url +"/r/"+encodeURI(Blockchain.Mining.minerAddress.replace("#", "%23"));
+        this.poolURLReferral =  ( process.env.BROWSER ? window.location.origin : "https://webdollar.ddns.net:9094"  ) + "/pool/"+url +"/r/"+encodeURI(Blockchain.Mining.minerAddress.replace(/#/g, "%23"));
 
         StatusEvents.emit("miner-pool/referral-url",   { poolURLReferral: this.poolURLReferral });
     }
@@ -135,6 +135,8 @@ class MinerPoolSettings {
         if (poolMinerActivated === "true") poolMinerActivated = true;
         else if (poolMinerActivated === "false") poolMinerActivated = false;
         else if (poolMinerActivated === null) poolMinerActivated = false;
+
+        poolMinerActivated = false;
 
         PoolsUtils.validatePoolActivated(poolMinerActivated);
 
