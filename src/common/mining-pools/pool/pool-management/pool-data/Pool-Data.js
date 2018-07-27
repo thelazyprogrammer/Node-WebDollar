@@ -127,8 +127,7 @@ class PoolData {
         if (index === -1) return false; //miner doesn't exists
 
         this.blocksInfo[index].destroyPoolDataBlockInformation(  );
-        this.blocksInfo[index] = this.blocksInfo[this.blocksInfo.length-1];
-        this.blocksInfo.pop();
+        this.blocksInfo.splice(index, 1);
 
         return true;
     }
@@ -418,7 +417,7 @@ class PoolData {
     _clearEmptyMiners(){
 
         // for (let i=this.miners.length-1; i>=0; i--)
-        //     if ( this.miners[i].referrals.array.length === 0 && this.miners[i].referrals.referralLinkMiner !== undefined &&
+        //     if ( this.miners[i].referrals.referees.length === 0 && this.miners[i].referrals.referralLinkMiner !== undefined &&
         //         (this.miners[i].rewardTotal + this.miners[i].rewardConfirmed + this.miners[i].rewardConfirmedOther + this.miners[i].rewardSent + this.miners[i].referrals.rewardReferralsSent + this.miners[i].referrals.rewardReferralsConfirmed + this.miners[i].referrals.rewardReferralsTotal ) === 0) {
         //
         //
