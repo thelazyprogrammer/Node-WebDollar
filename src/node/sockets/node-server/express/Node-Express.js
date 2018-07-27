@@ -509,6 +509,28 @@ class NodeExpress{
         })
 
 
+        // Return block information
+        this.app.get('/pending_trx', (req, res) => {
+          try {
+              let transactions = []
+              if (Blockchain.blockchain.transactions.pendingQueue.list) {
+                Blockchain.blockchain.transactions.pendingQueue.list.forEach(function(trx) {
+                  transactions.push(trx.toJSON())
+                })
+              }
+              res.send({
+                result: true,
+                trxs: transactions,
+                trxs_number: transactions.length,
+              })
+              return;
+          } catch (exception) {
+            res.send({result: false, message: "Invalid request"})
+            return;
+          }
+        })
+
+
         // Return address info: balance, blocks mined and transactions
         this.app.get('/address/:address', (req, res) => {
             let address = decodeURIComponent(req.params.address);
