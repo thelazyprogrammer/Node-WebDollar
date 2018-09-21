@@ -396,8 +396,8 @@ class InterfaceBlockchain extends InterfaceBlockchainBasic{
 
                     block.blockValidation.blockValidationType = {};
 
-                    if (index < numBlocks - 50000)
-                        block.data.transactions.freeTransactionsFromMemory();
+                    //if (index < numBlocks)
+                    //    block.data.transactions.freeTransactionsFromMemory();
 
                     if (index > 0 && index % 10000 === 0) {
                         await this.db.restart();
