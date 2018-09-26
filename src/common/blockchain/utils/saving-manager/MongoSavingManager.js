@@ -31,7 +31,7 @@ const logger = winston.createLogger({
   ]
 });
 
-const mongodbBlockchainDB = "blockchainDB3Sync"
+const mongodbBlockchainDB = "blockchainDB3"
 const mongodbBlockCollection = "blocks"
 const mongodbUrl = "mongodb://localhost:27017"
 
