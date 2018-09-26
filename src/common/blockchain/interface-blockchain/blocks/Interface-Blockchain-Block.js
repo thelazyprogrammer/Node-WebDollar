@@ -3,6 +3,7 @@ const BigInteger = require('big-integer');
 import WebDollarCrypto from 'common/crypto/WebDollar-Crypto'
 import BlockchainGenesis from 'common/blockchain/global/Blockchain-Genesis'
 import BlockchainMiningReward from 'common/blockchain/global/Blockchain-Mining-Reward'
+import MongodbSavingManager from 'common/blockchain/utils/saving-manager/MongoSavingManager.js'
 import consts from 'consts/const_global'
 
 import Serialization from "common/utils/Serialization";
@@ -40,6 +41,32 @@ class InterfaceBlockchainBlock {
             blockValidation = this.blockchain.createBlockValidation();
 
         this.blockValidation = blockValidation;
+
+        this.mongodbSavingManager = new MongodbSavingManager()
+        if ( timeStamp === undefined  || timeStamp === null) {
+
+            timeStamp = this.blockchain.timestamp.networkAdjustedTime - BlockchainGenesis.timeStampOffset;
+
+            if (timeStamp === undefined || timeStamp === null)
+                timeStamp = ( new Date().getTime() - BlockchainGenesis.timeStampOffset) / 1000;
+
+            timeStamp += Math.floor( Math.random()*5   );
+
+            try {
+
+                this.blockchain.blocks.timestampBlocks.validateMedianTimestamp( timeStamp, this.height, this.blockValidation );
+
+            } catch (exception){
+                timeStamp = exception.medianTimestamp + 1;
+
+                this.blockchain.blocks.timestampBlocks.validateMedianTimestamp( timeStamp, this.height, this.blockValidation );
+
+                //timeStamp = exception.medianTimestamp + consts.BLOCKCHAIN.DIFFICULTY.TIME_PER_BLOCK + 1;
+            }
+
+
+            timeStamp = Math.ceil( timeStamp );
+        }
 
         this.timeStamp = timeStamp||null; //Current timestamp as seconds since 1970-01-01T00:00 UTC        - 4 bytes,
 
@@ -436,6 +463,7 @@ class InterfaceBlockchainBlock {
             answer = true;
             try{
                 answer = answer && await this.db.save(key, bufferValue);
+                this.mongodbSavingManager.saveBlock(this.height, bufferValue)
                 answer = answer && await this.saveBlockDifficulty();
                 answer = answer && await this.saveBlockHash();
                 answer = answer && await this.saveBlockHashInversed();

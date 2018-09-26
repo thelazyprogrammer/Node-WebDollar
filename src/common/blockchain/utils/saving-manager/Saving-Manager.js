@@ -3,7 +3,7 @@ import consts from 'consts/const_global'
 import Log from 'common/utils/logging/Log';
 import Utils from "common/utils/helpers/Utils";
 
-const SAVING_MANAGER_INTERVAL = 5000;
+const SAVING_MANAGER_INTERVAL = 500;
 const MAX_BLOCKS_MEMORY = 1000;
 
 class SavingManager{
