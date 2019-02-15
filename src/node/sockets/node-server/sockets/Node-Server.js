@@ -149,7 +149,7 @@ class NodeServer {
 
                     if ( !nodeDomain || !waitlist.waitlist || !waitlist.waitlist.isFallback) {
 
-                        if (Math.random() < 0.05) console.warn("too many terminal connections");
+                        console.warn("too many terminal connections");
                         return NodePropagationList.propagateWaitlistSimple(socket, nodeType, true); //it will also disconnect the socket
 
                     }
@@ -158,7 +158,7 @@ class NodeServer {
 
                 if (NODE_TYPE.NODE_WEB_PEER === nodeType && ( (NodesList.countNodesByType(NODE_TYPE.NODE_WEB_PEER) > (Blockchain.isPoolActivated ?   consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER_POOL : consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER)) || Blockchain.blockchain.agent.status === AGENT_STATUS.AGENT_STATUS_NOT_SYNCHRONIZED) && !consts.DEBUG) {
 
-                    if (Math.random() < 0.05) console.warn("too many browser connections");
+                    console.warn("too many browser connections");
                     return NodePropagationList.propagateWaitlistSimple(socket, nodeType, true); //it will also disconnect the socket
 
                 }
@@ -199,8 +199,7 @@ class NodeServer {
 
                     SocketExtend.extendSocket(socket, sckAddress, undefined, undefined, 1);
 
-                    if ( Math.random() < 0.3)
-                        console.warn('New connection from ' + socket.node.sckAddress.getAddress(true) + " "+ (nodeType === NODE_TYPE.NODE_WEB_PEER ? "browser" : "terminal") );
+                    console.warn('New connection from ' + socket.node.sckAddress.getAddress(true) + " "+ (nodeType === NODE_TYPE.NODE_WEB_PEER ? "browser" : "terminal") );
 
                     if (nodeType === NODE_TYPE.NODE_TERMINAL ) this._rooms.terminals.serverSits--;
                     else if (nodeType === NODE_TYPE.NODE_WEB_PEER ) this._rooms.browsers.serverSits--;
