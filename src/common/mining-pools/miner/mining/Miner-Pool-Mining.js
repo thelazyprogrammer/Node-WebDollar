@@ -150,8 +150,6 @@ class MinerPoolMining extends InheritedPoolMining {
         this._miningWork.poolSocket = poolSocket;
         this._miningWork.resolved = false;
 
-        this.minerPoolManagement.minerPoolMining.resetForced = false;
-
         Log.info("New Work: "+ (work.end - work.start) + "   starting at: "+work.start + " block: "+this._getBlockSuffix(), Log.LOG_TYPE.POOLS );
 
     }
@@ -244,7 +242,7 @@ class MinerPoolMining extends InheritedPoolMining {
             try {
 
                 if ( !this._miningWork.block ) throw {message: "block is undefined"};
-                if ( typeof this._miningWork.end  !== "number" ) throw {message: "start is undefined"};
+                if ( typeof this._miningWork.start  !== "number" ) throw {message: "start is undefined"};
                 if ( typeof this._miningWork.end  !== "number" ) throw {message: "end is undefined"};
                 if ( !this._miningWork.difficultyTarget ) throw {message: "difficultyTarget is undefined"};
 
@@ -276,7 +274,7 @@ class MinerPoolMining extends InheritedPoolMining {
             // if ( this._miningWork.poolSocket && this._hashesPerSecond === 0 )
             //     await this.minerPoolManagement.minerPoolProtocol.requestWork();
 
-            if (this.started && this.minerPoolManagement.started && ( (new Date().getTime() - this._miningWork.date ) > 300000 || this.minerPoolManagement.minerPoolProtocol.connectedPools.length === 0 ) ){
+            if (this.started && this.minerPoolManagement.started && ( ( new Date().getTime() - this._miningWork.date ) > 300000 || this.minerPoolManagement.minerPoolProtocol.connectedPools.length === 0 ) ){
 
                 //in case I can not mine from this pool, show an error and disconnect
                 Log.error("Mining Pool is not working. Trying to reconnect", Log.LOG_TYPE.POOLS);

@@ -30,7 +30,7 @@ class NodeBlockchainPropagation{
         setTimeout( this.processPropagation.bind(this), INTERVAL_PROPAGATION);
 
         //remove disconnected sockets
-        setInterval( this._deleteDisconenctedSockets.bind(this), 20000)
+        setInterval( this._deleteDisconnectedSockets.bind(this), 20000)
     }
 
     propagateBlock(block, socketsAvoidBroadcast){
@@ -42,7 +42,7 @@ class NodeBlockchainPropagation{
 
         this._socketsAlreadyBroadcast = [];
 
-        if (socketsAvoidBroadcast !== undefined && socketsAvoidBroadcast !== "all") {
+        if (socketsAvoidBroadcast && socketsAvoidBroadcast !== "all") {
 
             if (! Array.isArray(socketsAvoidBroadcast) )
                 socketsAvoidBroadcast = [socketsAvoidBroadcast];
@@ -79,12 +79,7 @@ class NodeBlockchainPropagation{
 
         let block = this._blockPropagating;
 
-        if (block === undefined){
-            setTimeout( this.processPropagation.bind(this), INTERVAL_PROPAGATION );
-            return true;
-        }
-
-        if (this._socketsPropagating.length < consts.SETTINGS.PARAMS.CONNECTIONS.SOCKETS_TO_PROPAGATE_NEW_BLOCK_TIP) {
+        if (block && this._socketsPropagating.length < consts.SETTINGS.PARAMS.CONNECTIONS.SOCKETS_TO_PROPAGATE_NEW_BLOCK_TIP) {
 
             let list = [];
             for (let i=0; i<NodesList.nodes.length; i++)
@@ -144,7 +139,7 @@ class NodeBlockchainPropagation{
         return false;
     }
 
-    _deleteDisconenctedSockets(){
+    _deleteDisconnectedSockets(){
 
         for (let i=this._socketsAlreadyBroadcast.length-1; i>=0; i--)
             if (this._socketsAlreadyBroadcast[i].disconnected)

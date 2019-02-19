@@ -42,14 +42,23 @@ class PoolDataMiner{
         this.referrals.destroyPoolDataMinerReferrals();
     }
 
-    addInstance(socket){
+    addInstance(socket, miner){
+
+        if (socket.node.protocol.minerPool && socket.node.protocol.minerPool.minerInstance && socket.node.protocol.minerPool.miner === miner)
+            return socket.node.protocol.minerPool.minerInstance;
 
         let instance = this.findInstance(socket);
+        if (instance) return instance;
 
-        if ( !instance ) {
-            instance = new PoolDataMinerInstance(this, socket);
-            this.instances.push(instance);
+        //find an empty instance
+        instance = this.findEmptyInstance(miner);
+        if (instance){
+            instance.socket = socket;
+            return instance;
         }
+
+        instance = new PoolDataMinerInstance(this, socket);
+        this.instances.push(instance);
 
         return instance;
 
@@ -62,6 +71,15 @@ class PoolDataMiner{
                 return returnPos ? i : this.instances[i];
 
         return returnPos ? -1 : null;
+    }
+
+    findEmptyInstance(miner){
+
+        for (let i=0; i < this.instances.length; i++)
+            if (this.instances[i].miner === miner && (!this.instances[i].socket || this.instances[i].socket.disconnected ))
+                return this.instances[i];
+
+        return;
     }
 
     removeInstance(socket){

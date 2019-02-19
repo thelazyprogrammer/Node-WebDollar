@@ -80,7 +80,6 @@ class MinerPoolProtocol extends PoolProtocolList{
 
                 let answer = await this._sendPoolHello(socket);
 
-
                 if (!answer)
                     throw {message: "send hello is not working"};
 
@@ -133,8 +132,8 @@ class MinerPoolProtocol extends PoolProtocolList{
             }, "answer", 30000  );
 
 
-            if (answer === null ) throw {message: "pool : didn't respond"}; //in case there was an error message
-            if (answer.result !== true) throw {message: "pool : result is not true" + answer.message} //in case there was an error message
+            if ( !answer ) throw {message: "pool : didn't respond"}; //in case there was an error message
+            if ( !answer.result ) throw {message: "pool : result is not true" + answer.message} //in case there was an error message
 
             try{
 
@@ -210,8 +209,11 @@ class MinerPoolProtocol extends PoolProtocolList{
     async _connectionEstablishedWithPool(socket ){
 
         this.minerPoolManagement.minerPoolMining.resetForced = true;
+
         if (this.minerPoolManagement.minerPoolMining._isBeingMining)
             await this.minerPoolManagement.minerPoolMining._isBeingMining;
+
+        this.minerPoolManagement.minerPoolMining.resetForced = false;
 
         socket.node.protocol.pool = {
         };
@@ -236,12 +238,13 @@ class MinerPoolProtocol extends PoolProtocolList{
                 if (typeof data.work !== "object") throw {message: "new-work invalid work"};
 
                 //await this._validateRequestWork( data.work, socket );
-                this.minerPoolManagement.minerPoolMining.resetForced = true;
 
                 this._updateStatistics( data);
                 this.minerPoolManagement.minerPoolReward.setReward(data);
 
                 this._validateRequestWork( data.work, socket);
+
+                this.minerPoolManagement.minerPoolMining.resetForced = true;
 
             } catch (exception){
                 console.error("new work raised an exception", exception);
@@ -251,7 +254,7 @@ class MinerPoolProtocol extends PoolProtocolList{
 
     }
 
-    async _validateRequestWork(work, socket){
+    _validateRequestWork(work, socket){
 
         if (typeof work !== "object") throw {message: "get-work invalid work"};
 
@@ -274,7 +277,7 @@ class MinerPoolProtocol extends PoolProtocolList{
             if (!ed25519.verify(work.sig, message, this.minerPoolManagement.minerPoolSettings.poolPublicKey)) throw {message: "pool: signature doesn't validate message"};
         }
 
-        await this.minerPoolManagement.minerPoolMining.updatePoolMiningWork( work, socket );
+        this.minerPoolManagement.minerPoolMining.updatePoolMiningWork( work, socket );
 
     }
 

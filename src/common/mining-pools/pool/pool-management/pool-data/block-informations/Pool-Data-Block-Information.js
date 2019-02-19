@@ -79,25 +79,20 @@ class PoolDataBlockInformation {
 
         this._calculateTimeRemaining();
 
+        let prevMiningHeight = this.miningHeights[height];
         let miningHeightDifficulty = this.miningHeights[height] || BigNumber(0);
 
-        if (add && miningHeightDifficulty.plus(difference).isGreaterThan(0 ) ){
-
-            if (!this.miningHeights[height]) { //didn't exist
-                this.miningHeights.length++;
-                if (pos && !consts.MINING_POOL.SKIP_POS_REWARDS) this.miningHeights.blocksPos++;
-                else if ( !pos && !consts.MINING_POOL.SKIP_POW_REWARDS) this.miningHeights.blocksPow++;
-            }
+        if (!difference.isEqualTo(0) ) {
 
             this.miningHeights[height] = miningHeightDifficulty.plus(difference);
 
-        }
+            if (!prevMiningHeight && this.miningHeights[height].isGreaterThan(0)) { //didn't exist
+                this.miningHeights.length++;
+                if (pos && !consts.MINING_POOL.SKIP_POS_REWARDS) this.miningHeights.blocksPos++;
+                else if (!pos && !consts.MINING_POOL.SKIP_POW_REWARDS) this.miningHeights.blocksPow++;
+            }
 
-        if (!add && miningHeightDifficulty.plus(difference).isLessThanOrEqualTo(0)  && this.miningHeights[height] ){
-
-            this.miningHeights[height] = miningHeightDifficulty.plus( difference );
-
-            if (this.miningHeights[height].isEqualTo(0)){
+            if (prevMiningHeight && prevMiningHeight.isGreaterThan(0) && this.miningHeights[height].isEqualTo(0)) {
 
                 delete this.miningHeights[height];
                 this.miningHeights.length--;
@@ -106,8 +101,6 @@ class PoolDataBlockInformation {
                 else if (!pos && !consts.MINING_POOL.SKIP_POW_REWARDS) this.miningHeights.blocksPow--;
 
             }
-
-
         }
 
     }
@@ -129,7 +122,7 @@ class PoolDataBlockInformation {
 
         let blockInformationMinerInstance = this._findBlockInformationMinerInstance(minerInstance);
 
-        if (blockInformationMinerInstance === null) throw {message: "blockInformation - miner instance was not found "};
+        if ( !blockInformationMinerInstance ) throw {message: "blockInformation - miner instance was not found "};
 
         return blockInformationMinerInstance.reward;
 
@@ -137,24 +130,23 @@ class PoolDataBlockInformation {
 
     serializeBlockInformation(){
 
-        let buffers = [];
+        let buffers = [
 
-        buffers.push ( Serialization.serializeNumber1Byte( 0x03 ));
+            Serialization.serializeNumber1Byte( 0x03 ),
+            Serialization.serializeNumber4Bytes( this.height || 500 )
 
-        buffers.push ( Serialization.serializeNumber4Bytes( this.height || 500 ));
+        ];
 
         let minerInstances = [];
 
         if (this.blockInformationMinersInstances && Array.isArray(this.blockInformationMinersInstances) )
-            for (let i=0; i<this.blockInformationMinersInstances.length; i++) {
+            for (let blockInfoMinerInstance of this.blockInformationMinersInstances)
                 try {
-                    if (this.blockInformationMinersInstances[i].minerInstance && this.blockInformationMinersInstances[i].reward > 0)
-                        minerInstances.push(this.blockInformationMinersInstances[i].serializeBlockInformationMinerInstance());
+                    if ( blockInfoMinerInstance.minerInstance && blockInfoMinerInstance.reward > 0)
+                        minerInstances.push( blockInfoMinerInstance.serializeBlockInformationMinerInstance() );
                 } catch (exception){
 
                 }
-            }
-
 
         buffers.push ( Serialization.serializeNumber4Bytes(minerInstances.length) );
 
@@ -174,7 +166,7 @@ class PoolDataBlockInformation {
                 array.push(this.block.serializeBlock());
 
             } catch (exception){
-                Log.error("Error saving block", Log.LOG_TYPE.POOLS, this.block !== null ? this.block.toJSON() : '');
+                Log.error("Error saving block", Log.LOG_TYPE.POOLS, this.block ? this.block.toJSON() : '');
                 console.log(exception);
 
             }
@@ -219,8 +211,8 @@ class PoolDataBlockInformation {
 
             offset = blockInformationMinerInstance.deserializeBlockInformationMinerInstance(buffer, offset, version);
 
-            if ( !blockInformationMinerInstance.minerInstance ||  (blockInformationMinerInstance.minerInstanceTotalDifficultyPOS.isEqualTo(0) && blockInformationMinerInstance.minerInstanceTotalDifficultyPOW.isEqualTo(0) ) )
-                this.blockInformationMinersInstances.slice( this.blockInformationMinersInstances.length-1 );
+            if ( !blockInformationMinerInstance.minerInstance || !blockInformationMinerInstance.miner  ||  (blockInformationMinerInstance.minerInstanceTotalDifficultyPOS.isEqualTo(0) && blockInformationMinerInstance.minerInstanceTotalDifficultyPOW.isEqualTo(0) ) )
+                this.blockInformationMinersInstances.splice( this.blockInformationMinersInstances.length-1 );
 
 
         }
@@ -266,20 +258,20 @@ class PoolDataBlockInformation {
 
 
 
-    _findBlockInformationMinerInstance(minerInstance){
+    _findBlockInformationMinerInstance(minerInstance, pos = false){
 
         for (let i=0; i<this.blockInformationMinersInstances.length; i++)
             if (this.blockInformationMinersInstances[i].minerInstance === minerInstance )
-                return this.blockInformationMinersInstances[i];
+                return pos ? i : this.blockInformationMinersInstances[i];
 
-        return null;
+        return pos  ? -1 : null;
     }
 
-    _addBlockInformationMinerInstance(minerInstance){
+    addBlockInformationMinerInstance(minerInstance){
 
         if (!minerInstance ) throw {message: "minerInstance is undefined"};
 
-        let blockInformationMinerInstance = this._findBlockInformationMinerInstance(minerInstance);
+        let blockInformationMinerInstance = this.findFirstMinerInstance(minerInstance.address);
 
         if ( !blockInformationMinerInstance ) {
             blockInformationMinerInstance = new PoolDataBlockInformationMinerInstance(this.poolManagement, this, minerInstance, undefined,);
@@ -294,11 +286,10 @@ class PoolDataBlockInformation {
 
         let pos = minerInstance;
         if (typeof pos !== "number")
-            for (let i=this.blockInformationMinersInstances.length-1; i>=0; i--)
-                if (this.blockInformationMinersInstances[i].minerInstance === minerInstance ) {
-                    pos = i;
-                    break;
-                }
+            pos = this._findBlockInformationMinerInstance( minerInstance );
+
+        if (typeof pos !== "number")
+            return;
 
         this.blockInformationMinersInstances[pos].cancelReward();
         this.blockInformationMinersInstances[pos].cancelDifficulties();

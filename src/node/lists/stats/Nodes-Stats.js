@@ -15,6 +15,8 @@ class NodesStats {
 
     constructor(){
 
+        this._timeStart = new Date().getTime();
+
         this.statsClients = 0;
         this.statsServer = 0;
         this.statsWebPeers = 0;
@@ -47,6 +49,13 @@ class NodesStats {
         }
 
         console.info(" v: ", consts.SETTINGS.NODE.VERSION);
+        let now = Math.floor( (new Date().getTime() - this._timeStart)/60000);
+        let m = now % 60;  now = now / 60;
+        let h = now % 24;  now = now / 24;
+        let d = now % 30; now = now / 30;
+
+        console.info( `up time ${Math.floor(d) } d ${Math.floor(h) } h ${ Math.floor(m) } m` );
+
         console.log(" connected to: ", this.statsClients," , from: ", this.statsServer , " web peers WEBRTC", this.statsWebPeers," Network FullNodes:",this.statsWaitlistFullNodes, " Network LightNodes:",this.statsWaitlistLightNodes, "    GeoLocationContinents: ", GeoLocationLists.countGeoLocationContinentsLists );
         console.log(" browsers: ", this.statsBrowsers, " terminal: ", this.statsTerminal);
 
@@ -68,23 +77,24 @@ class NodesStats {
         console.log("server: ",string2);
 
 
-        let waitlist1 = [];
-        for ( let i=0; i<NodesWaitlist.waitListFullNodes.length; i++ )
-            if ( ! NodesWaitlist.waitListFullNodes[i].isFallback) {
-                let obj = NodesWaitlist.waitListFullNodes[i].toJSON();
-                obj.score = NodesWaitlist.waitListFullNodes[i].score;
-                obj.connected = NodesWaitlist.waitListFullNodes[i].connected;
-                waitlist1.push(obj);
-            }
-
-        let waitlist2 = [];
-        for ( let i=0; i<NodesWaitlist.waitListLightNodes.length; i++ )
-            if ( ! NodesWaitlist.waitListLightNodes[i].isFallback) {
-                let obj = NodesWaitlist.waitListLightNodes[i].toJSON();
-                obj.score = NodesWaitlist.waitListLightNodes[i].score;
-                obj.connected = NodesWaitlist.waitListLightNodes[i].connected;
-                waitlist2.push(obj);
-            }
+        // let waitlist1 = [];
+        //
+        // for (let waitlistFullNode of NodesWaitlist.waitListFullNodes)
+        //     if ( ! waitlistFullNode.isFallback) {
+        //         let obj = waitlistFullNode.toJSON();
+        //         obj.score = waitlistFullNode.score;
+        //         obj.connected = waitlistFullNode.connected;
+        //         waitlist1.push(obj);
+        //     }
+        //
+        // let waitlist2 = [];
+        // for (let waitlistLightNode of NodesWaitlist.waitListLightNodes)
+        //     if ( ! waitlistLightNode.isFallback) {
+        //         let obj = waitlistLightNode.toJSON();
+        //         obj.score = waitlistLightNode.score;
+        //         obj.connected = waitlistLightNode.connected;
+        //         waitlist2.push(obj);
+        //     }
 
         console.log("waitlist full node ", NodesWaitlist.waitListFullNodes.length);
         console.log("waitlist light node ", NodesWaitlist.waitListLightNodes.length);
@@ -93,7 +103,7 @@ class NodesStats {
 
     _recalculateStats(nodesListObject, printStats = true){
 
-        this.statsClients = NodesList.countNodesByConnectionType(CONNECTIONS_TYPE.CONNECTION_CLIENT_SOCKET, true);
+        this.statsClients = NodesList.countNodesByConnectionType(CONNECTIONS_TYPE.CONNECTION_CLIENT_SOCKET);
         this.statsServer = NodesList.countNodesByConnectionType(CONNECTIONS_TYPE.CONNECTION_SERVER_SOCKET);
         this.statsWebPeers = NodesList.countNodesByConnectionType(CONNECTIONS_TYPE.CONNECTION_WEBRTC);
 

@@ -92,9 +92,8 @@ class NodesWaitlistObject {
         //checking if I had been connected in the past
 
         for (let i = 0; i < this.sckAddresses.length; i++) {
-            let socket = NodesList.searchNodeSocketByAddress(this.sckAddresses[i], 'all', ["ip","uuid"]);
-            if (socket !== null)
-                return socket;
+            let socket = NodesList.searchNodeSocketByAddress(this.sckAddresses[i], 'all', {"ip":true,"uuid":true });
+            if (socket) return socket;
         }
 
         return null;
@@ -136,7 +135,7 @@ class NodesWaitlistObject {
 
     pushBackedBy( sckAddress, connected ){
 
-        if (typeof sckAddress === "object" && sckAddress.node !== undefined && sckAddress.node.sckAddress !== undefined)
+        if (sckAddress && typeof sckAddress === "object" && sckAddress.node && sckAddress.node.sckAddress )
             sckAddress = sckAddress.node.sckAddress;
 
         //check if it is already found
@@ -214,12 +213,12 @@ class NodesWaitlistObject {
         if (this.sckAddresses[0].SSL) //SSL +5000
             score += 80000;
 
-        if (this.socket !== undefined && this.socket !== null){
+        if ( this.socket ){
 
             let socket = this.socket;
             if (socket.hasOwnProperty("socket")) socket = socket.socket;
 
-            if (socket.node.protocol.blocks === undefined) score -= 300;
+            if (!socket.node.protocol.blocks ) score -= 300;
             else {
 
                 let diff = Math.abs ( Blockchain.blockchain.blocks.length - socket.node.protocol.blocks);

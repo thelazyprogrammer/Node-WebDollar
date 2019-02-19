@@ -23,13 +23,14 @@ class PoolWork {
     }
 
     startGarbageCollector(){
-        this._garbageCollectorInterval = setInterval( this._garbageCollector.bind(this), 30000);
+        if (!this._garbageCollectorInterval)
+            this._garbageCollectorInterval = setTimeout( this._garbageCollector.bind(this), 30000);
     }
 
     stopGarbageCollector(){
 
-        if ( this._garbageCollectorInterval )
-            clearInterval(this._garbageCollectorInterval);
+        if ( this._garbageCollectorInterval ) clearTimeout(this._garbageCollectorInterval);
+        this._garbageCollectorInterval = undefined;
 
     }
 
@@ -120,46 +121,60 @@ class PoolWork {
     }
 
 
-    _garbageCollector(){
+    async _garbageCollector(){
 
-        let time = (new Date().getTime()/1000) - BlockchainGenesis.timeStampOffset;
+        try{
 
-        for (let i=0; i<this._blocksList.length; i++) {
+            let time = (new Date().getTime()/1000) - BlockchainGenesis.timeStampOffset;
+            let destroyed = 0;
 
-            //verify if the block was a solution to a block
-            let found = false;
-            for (let j =0 ; j < this.poolManagement.poolData.blocksInfo.length; j++)
-                if ( this.poolManagement.poolData.blocksInfo[j].block && this._blocksList[i].block &&
-                     (this.poolManagement.poolData.blocksInfo[j].block === this._blocksList[i].block || ( this._blocksList[i].block.hash && this.poolManagement.poolData.blocksInfo[j].block.hash.equals(this._blocksList[i].block.hash) )) ){
-                    found = true;
-                    break;
-                }
+            for (let i=0; i<this._blocksList.length; i++) {
 
-            if (!found)
+                //verify if the block was a solution to a block
+                let found = false;
+                for (let j =0 ; j < this.poolManagement.poolData.blocksInfo.length; j++)
+                    if ( this.poolManagement.poolData.blocksInfo[j].block && this._blocksList[i].block &&
+                        (this.poolManagement.poolData.blocksInfo[j].block === this._blocksList[i].block || ( this._blocksList[i].block.hash && this.poolManagement.poolData.blocksInfo[j].block.hash.equals(this._blocksList[i].block.hash) )) ){
+                        found = true;
+                        break;
+                    }
+
+                if (!found)
                 //delete block
-                if ( this._blocksList[i].block !== this.lastBlock && ( (time - this._blocksList[i].block.timeStamp ) > 200*consts.BLOCKCHAIN.DIFFICULTY.TIME_PER_BLOCK) && this._blocksList[i].block.height < this.blockchain.blocks.length - 100 ) {
+                    if ( this._blocksList[i].block !== this.lastBlock && ( (time - this._blocksList[i].block.timeStamp ) > 200*consts.BLOCKCHAIN.DIFFICULTY.TIME_PER_BLOCK) && this._blocksList[i].block.height < this.blockchain.blocks.length - 100 ) {
 
-                    Log.warn("==========================================", Log.LOG_TYPE.POOLS);
-                    Log.warn("GARBAGE COLLECTOR DELETE BLOCK "+ this._blocksList[i].blockId +" height "+this._blocksList[i].block.height, Log.LOG_TYPE.POOLS);
-                    Log.warn("==========================================", Log.LOG_TYPE.POOLS);
+                        Log.warn("==========================================", Log.LOG_TYPE.POOLS);
+                        Log.warn("GARBAGE COLLECTOR DELETE BLOCK "+ this._blocksList[i].blockId +" height "+this._blocksList[i].block.height, Log.LOG_TYPE.POOLS);
+                        Log.warn("==========================================", Log.LOG_TYPE.POOLS);
 
-                    for (let key in this._blocksList[i].instances)
-                        if (this._blocksList[i].instances.hasOwnProperty(key))
+                        for (let key in this._blocksList[i].instances)
                             this._blocksList[i].instances[key].workBlock = undefined;
 
+                        if (this._blocksList[i].block )
+                            this._blocksList[i].block.destroyBlock();
 
-                    if (this._blocksList[i].block !== undefined)
-                        this._blocksList[i].block.destroyBlock();
+                        this._blocksList[i].block = undefined;
+                        this._blocksList[i].instances = undefined;
 
-                    this._blocksList[i].block = undefined;
-                    this._blocksList[i].instances = undefined;
+                        this._blocksList.splice(i, 1);
+                        destroyed++;
 
-                    this._blocksList.splice(i, 1);
+                        if (destroyed % 10 === 0)
+                            await this.blockchain.sleep(100);
 
-                    i--;
-                }
+                        i--;
+                    }
+
+
+
+            }
+
+
+        } catch (exception){
 
         }
+
+        this._garbageCollectorInterval = setTimeout( this._garbageCollector.bind(this), 30000);
 
     }
 

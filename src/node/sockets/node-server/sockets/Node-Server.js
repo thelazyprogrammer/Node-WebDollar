@@ -22,13 +22,13 @@ const TIME_DISCONNECT_TERMINAL_TOO_OLD_BLOCKS = 5*60*1000;
 const ROOMS = {
 
     TERMINALS:{
-        TIME_TO_PASS_TO_CONNECT_NEW_CLIENT : 4*1000,
-        SERVER_FREE_ROOM : 20,
+        TIME_TO_PASS_TO_CONNECT_NEW_CLIENT : 2*1000,
+        SERVER_FREE_ROOM : 50,
     },
 
     BROWSERS:{
-        TIME_TO_PASS_TO_CONNECT_NEW_CLIENT : 4*1000,
-        SERVER_FREE_ROOM : 20,
+        TIME_TO_PASS_TO_CONNECT_NEW_CLIENT : 2*1000,
+        SERVER_FREE_ROOM : 50,
     },
 
 };
@@ -46,7 +46,7 @@ class NodeServer {
 
         this.loaded = false;
 
-        setInterval(this._disconenctOldSockets.bind(this), 30 * 1000);
+        setInterval(this._disconnectOldSockets.bind(this), 30 * 1000);
 
         this._rooms = {
 
@@ -100,19 +100,16 @@ class NodeServer {
 
                 if (socket.request._query["msg"] !== "HelloNode"){
                     console.error("No Hello Msg");
-                    socket.disconnect();
-                    return
+                    return socket.disconnect();
                 }
 
-                if (socket.request._query["version"] === undefined || socket.request._query["version"] < consts.SETTINGS.NODE.VERSION_COMPATIBILITY){
+                if (!socket.request._query["version"] || socket.request._query["version"] < consts.SETTINGS.NODE.VERSION_COMPATIBILITY){
                     if (Math.random() < 0.05)
                         console.error("version is invalid", socket.request._query["version"]);
-                    socket.disconnect();
-                    return
+                    return socket.disconnect();
                 }
 
-                if ( socket.request._query["uuid"] === consts.SETTINGS.UUID )
-                    return false;
+                if ( socket.request._query["uuid"] === consts.SETTINGS.UUID ) return false;
 
                 let nodeType = socket.request._query["nodeType"];
                 if (typeof nodeType  === "string") nodeType = parseInt(nodeType);
@@ -120,63 +117,51 @@ class NodeServer {
                 let nodeConsensusType = socket.request._query["nodeConsensusType"];
                 if (typeof nodeConsensusType === "string") nodeConsensusType = parseInt(nodeConsensusType);
 
-                let nodeDomain = socket.request._query["domain"];
-                if ( nodeDomain === undefined) nodeDomain = "";
-
-                if (nodeDomain.indexOf("my-ip:")>=0)
-                    nodeDomain = nodeDomain.replace("my-ip", socket.request.connection.remoteAddress);
+                let nodeDomain = socket.request._query["domain"]||'';
+                nodeDomain = nodeDomain.replace("my-ip", socket.request.connection.remoteAddress);
 
                 let nodeUTC = socket.request._query["UTC"];
                 if (typeof nodeUTC === "string") nodeUTC = parseInt(nodeUTC);
 
-                if ( socket.request._query["uuid"] === undefined || [NODE_TYPE.NODE_TERMINAL, NODE_TYPE.NODE_WEB_PEER].indexOf( nodeType ) === -1) {
+                if ( !socket.request._query["uuid"] || (nodeType !== NODE_TYPE.NODE_TERMINAL && nodeType !== NODE_TYPE.NODE_WEB_PEER)) {
                     console.error("invalid uuid or nodeType");
-                    socket.disconnect();
-                    return;
+                    return socket.disconnect();
                 }
 
 
-                if ( (Blockchain.PoolManagement !== undefined && Blockchain.PoolManagement._poolStarted && nodeConsensusType !== NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER) ||
-                     (Blockchain.ServerPoolManagement !== undefined && Blockchain.ServerPoolManagement._serverPoolStarted  && nodeConsensusType !== NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER)){
-
+                if ( (Blockchain.PoolManagement && Blockchain.PoolManagement._poolStarted && nodeConsensusType !== NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER) ||
+                     (Blockchain.ServerPoolManagement && Blockchain.ServerPoolManagement._serverPoolStarted  && nodeConsensusType !== NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER)){
 
                     if (Math.random() < 0.1)
                         console.error("disconnecting user for being simple node", nodeConsensusType);
 
-                    socket.disconnect();
-                    return;
-
+                    return socket.disconnect();
                 }
 
                 //avoid allowing
-                if (!Blockchain.blockchain.agent.consensus){
-                    socket.disconnect();
-                    return;
-                }
+                if (!Blockchain.blockchain.agent.consensus)
+                    return socket.disconnect();
 
-                let semiPublicKeyConsensus = socket.request._query["semiPublicKeyConsensus"];
+                if (NODE_TYPE.NODE_TERMINAL === nodeType && NodesList.countNodesByType( NODE_TYPE.NODE_TERMINAL ) > (Blockchain.isPoolActivated ?   consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_TERMINAL_POOL : consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_TERMINAL) ) {
 
-                if (consts.MINING_POOL.SEMI_PUBLIC_KEY_CONSENSUS === undefined || consts.MINING_POOL.SEMI_PUBLIC_KEY_CONSENSUS.indexOf(semiPublicKeyConsensus) === -1 )
-                    if (NODE_TYPE.NODE_TERMINAL === nodeType && NodesList.countNodesByType( NODE_TYPE.NODE_TERMINAL ) > (Blockchain.isPoolActivated ?   consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_TERMINAL_POOL : consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_TERMINAL) ) {
+                    //be sure it is not a fallback node
+                    let waitlist = NodesWaitlist._searchNodesWaitlist(nodeDomain, undefined, NODE_TYPE.NODE_TERMINAL); //it should need a confirmation
 
-                        //be sure it is not a fallback node
-                        let waitlist = NodesWaitlist._searchNodesWaitlist(nodeDomain, undefined, NODE_TYPE.NODE_TERMINAL); //it should need a confirmation
+                    if ( !nodeDomain || !waitlist.waitlist || !waitlist.waitlist.isFallback) {
 
-                        if (nodeDomain === '' || nodeDomain === undefined || waitlist.waitlist === null || !waitlist.waitlist.isFallback) {
-
-                            if (Math.random() < 0.05) console.warn("too many terminal connections");
-                            return NodePropagationList.propagateWaitlistSimple(socket, nodeType, true); //it will also disconnect the socket
-
-                        }
-
-                    } else
-
-                    if (NODE_TYPE.NODE_WEB_PEER === nodeType && ( (NodesList.countNodesByType(NODE_TYPE.NODE_WEB_PEER) > (Blockchain.isPoolActivated ?   consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER_POOL : consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER)) || Blockchain.blockchain.agent.status === AGENT_STATUS.AGENT_STATUS_NOT_SYNCHRONIZED) && !consts.DEBUG) {
-
-                        if (Math.random() < 0.05) console.warn("too many browser connections");
+                        if (Math.random() < 0.05) console.warn("too many terminal connections");
                         return NodePropagationList.propagateWaitlistSimple(socket, nodeType, true); //it will also disconnect the socket
 
                     }
+
+                } else
+
+                if (NODE_TYPE.NODE_WEB_PEER === nodeType && ( (NodesList.countNodesByType(NODE_TYPE.NODE_WEB_PEER) > (Blockchain.isPoolActivated ?   consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER_POOL : consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_BROWSER)) || Blockchain.blockchain.agent.status === AGENT_STATUS.AGENT_STATUS_NOT_SYNCHRONIZED) && !consts.DEBUG) {
+
+                    if (Math.random() < 0.05) console.warn("too many browser connections");
+                    return NodePropagationList.propagateWaitlistSimple(socket, nodeType, true); //it will also disconnect the socket
+
+                }
 
 
                 if (NODE_TYPE.NODE_TERMINAL === nodeType && this._rooms.terminals.serverSits <= 0)
@@ -189,7 +174,7 @@ class NodeServer {
                     }else {
 
                         let waitlist = NodesWaitlist._searchNodesWaitlist(nodeDomain, undefined, NODE_TYPE.NODE_TERMINAL); //it should need a confirmation
-                        if ( waitlist === null || waitlist.waitlist === null) //it will also disconnect the socket
+                        if ( !waitlist || !waitlist.waitlist ) //it will also disconnect the socket
                             return  await NodePropagationList.propagateWaitlistSimple(socket, nodeType, true);
 
                     }
@@ -220,7 +205,7 @@ class NodeServer {
                     if (nodeType === NODE_TYPE.NODE_TERMINAL ) this._rooms.terminals.serverSits--;
                     else if (nodeType === NODE_TYPE.NODE_WEB_PEER ) this._rooms.browsers.serverSits--;
 
-                    if (await socket.node.protocol.sendHello(["uuid","ip", "port"], false) === false){
+                    if (await socket.node.protocol.sendHello({ "uuid": true, "ip": true, "port": true}, false) === false){
 
                         socket.disconnect();
                         return false;
@@ -235,7 +220,7 @@ class NodeServer {
 
                     socket.node.protocol.helloValidated = true;
 
-                    await this.initializeSocket(socket, ["uuid"]);
+                    await this.initializeSocket(socket, {"uuid": true});
 
                 } else {
 
@@ -299,7 +284,7 @@ class NodeServer {
     async getServerHTTPAddress(getIP) {
 
 
-        if (NodeExpress === undefined) return '';
+        if ( !NodeExpress ) return '';
 
         if ( !this.loaded )
             await NodeExpress.startExpress();
@@ -308,34 +293,36 @@ class NodeServer {
         if (NodeExpress.port === 0) return '';
         if (NodeExpress.domain  === '') return '';
 
-        if ( getIP ){
-
+        if ( getIP )
             return 'http' + ( NodeExpress.SSL ? 's' : '') + '://' + await publicIp.v4() + ":" + NodeExpress.port;
-
-        }
 
         return 'http' + ( NodeExpress.SSL ? 's' : '') + '://' + NodeExpress.domain  + ":" + NodeExpress.port;
 
 
     }
 
-    _disconenctOldSockets() {
+    _disconnectOldSockets() {
 
         let time = new Date().getTime();
 
+        let isPoolActivated = Blockchain.isPoolActivated;
+
         //disconnect unresponsive nodes
         for (let i = 0; i < NodesList.nodes.length; i++)
-            if (NodesList.nodes[i].socket.node !== undefined && NodesList.nodes[i].socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL)
+            if (NodesList.nodes[i].socket.node && NodesList.nodes[i].socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL) {
+
+                if (isPoolActivated && NodesList.nodes[i].socket.node.protocol.nodeConsensusType === NODES_CONSENSUS_TYPE.NODE_CONSENSUS_MINER_POOL)
+                    continue;
 
                 if (NodesList.nodes[i].date - time > TIME_DISCONNECT_TERMINAL_TOO_OLD_BLOCKS) {
 
-                    if (NodesList.nodes[i].socket.node.protocol.blocks === NodesList.nodes[i].socket.node.protocol.blocksPrevious){
+                    if (NodesList.nodes[i].socket.node.protocol.blocks === NodesList.nodes[i].socket.node.protocol.blocksPrevious) {
 
                         NodesList.nodes[i].socket.node.protocol.sendLastBlock();
 
                         setTimeout(() => {
 
-                            if ( NodesList.nodes[i] )
+                            if (NodesList.nodes[i])
                                 NodesList.nodes[i].socket.disconnect();
 
                         }, 3000);
@@ -347,14 +334,15 @@ class NodeServer {
                     }
 
                 }
+            }
 
 
-        if (!Blockchain.isPoolActivated ) {
+        if (!isPoolActivated ) {
 
             if (NodesList.countNodesByType(NODE_TYPE.NODE_TERMINAL) > consts.SETTINGS.PARAMS.CONNECTIONS.TERMINAL.SERVER.MAXIMUM_CONNECTIONS_FROM_TERMINAL / 2) {
 
                 for (let i = 0; i < NodesList.nodes.length; i++)
-                    if (NodesList.nodes[i].socket.node !== undefined && NodesList.nodes[i].socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL)
+                    if (NodesList.nodes[i].socket.node && NodesList.nodes[i].socket.node.protocol.nodeType === NODE_TYPE.NODE_TERMINAL)
                         if (!NodesList.nodes[i].isFallback && NodesList.nodes[i].date - time > TIME_DISCONNECT_TERMINAL)
                             NodesList.nodes[i].socket.disconnect();
 
@@ -364,6 +352,11 @@ class NodeServer {
 
 
 
+    }
+
+    close(){
+        if (this.nodeServer)
+            this.nodeServer.close();
     }
 
 }

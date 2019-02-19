@@ -39,7 +39,7 @@ class NodesWaitlistConnecting {
             minimum_waitlist:0,
         };
 
-        this._timeoutCalculateNumberOfConnections = setTimeout( this._calculateNumberOfConnections.bind(this), 10000);
+        this._timeoutCalculateNumberOfConnections = setTimeout( this._calculateNumberOfConnections.bind(this), 20000);
 
         this._calculateNumberOfConnections();
 
@@ -92,7 +92,7 @@ class NodesWaitlistConnecting {
 
     _tryToConnectNextNode( nextWaitListObject){
 
-        if (Blockchain.MinerPoolManagement !== undefined && Blockchain.MinerPoolManagement.minerPoolStarted && [ NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER ].indexOf(nextWaitListObject.nodeConsensusType) < 0 ) return;
+        if (Blockchain.MinerPoolManagement&& Blockchain.MinerPoolManagement.minerPoolStarted && [ NODES_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER ].indexOf(nextWaitListObject.nodeConsensusType) < 0 ) return;
 
 
         if (Blockchain.blockchain.agent.consensus) {
@@ -128,9 +128,8 @@ class NodesWaitlistConnecting {
                 this._connectNowToNewNode(nextWaitListObject).then( (connected) => {
 
                     for (let i=this._connectingQueue.length-1; i>=0; i--)
-                        if (this._connectingQueue[i] === nextWaitListObject){
+                        if (this._connectingQueue[i] === nextWaitListObject)
                             this._connectingQueue.splice(i,1);
-                        }
 
                     nextWaitListObject.checked = true;
                     nextWaitListObject.blocked = false;
@@ -153,7 +152,7 @@ class NodesWaitlistConnecting {
         let index = Math.floor( Math.random() * nextWaitListObject.sckAddresses.length );
 
         //search if the new protocol was already connected in the past
-        let nodeClient = NodesList.searchNodeSocketByAddress( nextWaitListObject.sckAddresses[index], 'all', ["id","uuid"] );
+        let nodeClient = NodesList.searchNodeSocketByAddress( nextWaitListObject.sckAddresses[index], 'all', {"id": true,"uuid":true } );
         if (nodeClient !== null) return nodeClient;
 
         nodeClient = new NodeClient();

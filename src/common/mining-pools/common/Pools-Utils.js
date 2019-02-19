@@ -58,7 +58,7 @@ class PoolsUtils {
         this.validatePoolActivated(poolActivated);
         this.validatePoolFee(poolReferralFee);
 
-        if (poolAddress !== undefined)
+        if (poolAddress)
             if (InterfaceBlockchainAddressHelper.getUnencodedAddressFromWIF(poolAddress) === null) throw {message: "poolAddress is invalid"};
 
         return true;
@@ -87,19 +87,22 @@ class PoolsUtils {
             let answer = await NodesWaitlist.addNewNodeToWaitlist( server, undefined, NODE_TYPE.NODE_TERMINAL, NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER, undefined, undefined, undefined, undefined, true );
             let waitlistObject = answer.waitlist;
 
-            if ( waitlistObject !== null && waitlistObject.nodeConsensusType !== NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER)
-                waitlistObject.nodeConsensusType = NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER;
+            if (waitlistObject) {
 
-            //check the nodes that matches the waitlists
+                if (waitlistObject.nodeConsensusType !== NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER)
+                    waitlistObject.nodeConsensusType = NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER;
 
-            for (let j=0; j<NodesList.nodes.length; j++)
-                if ( NodesList.nodes[j].socket.node.sckAddress.matchAddress( waitlistObject.sckAddresses[0] )) {
+                //check the nodes that matches the waitlists
 
-                    if (NodesList.nodes[j].socket.node.protocol.nodeConsensusType === NODE_CONSENSUS_TYPE.NODE_CONSENSUS_PEER)
-                        NodesList.nodes[j].socket.node.protocol.nodeConsensusType = NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER;
+                for (let j = 0; j < NodesList.nodes.length; j++)
+                    if (NodesList.nodes[j].socket.node.sckAddress.matchAddress(waitlistObject.sckAddresses[0])) {
 
-                    NodesList.nodes[j].socket.node.protocol._checked = true;
-                }
+                        if (NodesList.nodes[j].socket.node.protocol.nodeConsensusType === NODE_CONSENSUS_TYPE.NODE_CONSENSUS_PEER)
+                            NodesList.nodes[j].socket.node.protocol.nodeConsensusType = NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER;
+
+                        NodesList.nodes[j].socket.node.protocol._checked = true;
+                    }
+            }
 
         }
 
@@ -107,11 +110,10 @@ class PoolsUtils {
 
         for (let j=NodesList.nodes.length-1; j>=0; j--) {
 
-            if (NodesList.nodes[j].socket.node.protocol.nodeConsensusType === NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER || NodesList.nodes[j].socket.node.protocol.nodeConsensusType === nodeConsensusType && !NodesList.nodes[j].socket.node.protocol._checked) {
+            if (NodesList.nodes[j].socket.node.protocol.nodeConsensusType === NODE_CONSENSUS_TYPE.NODE_CONSENSUS_SERVER || NodesList.nodes[j].socket.node.protocol.nodeConsensusType === nodeConsensusType && !NodesList.nodes[j].socket.node.protocol._checked)
                 NodesList.nodes[j].socket.disconnect();
-                NodesList.nodes.splice(j, 1);
-            } else
-            delete NodesList.nodes[j].socket.node.protocol._checked;
+            else
+                delete NodesList.nodes[j].socket.node.protocol._checked;
         }
 
     }
@@ -163,12 +165,12 @@ class PoolsUtils {
 
     extractPoolURL(url){
 
-        if ( url === null || url === "" || url === undefined ) return null;
+        if ( !url ) return null;
 
         url = sanitizer.sanitize(url);
 
         let object = Utils.getLocation(url);
-        if (object !== null)
+        if (object )
             url = object.pathname;
 
         if (url.indexOf("/pool/") === 0) url = url.replace("/pool/","");

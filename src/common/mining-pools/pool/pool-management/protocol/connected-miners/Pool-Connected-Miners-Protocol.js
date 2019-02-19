@@ -19,8 +19,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
         this.poolManagement = poolManagement;
 
-        this.connectedMiners = [];
-        this.list = this.connectedMiners;
+        this.connectedMiners = this.list;
 
     }
 
@@ -85,7 +84,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
                 // save minerPublicKey
                 let miner = await this.poolManagement.poolData.addMiner( unencodedAddress );
 
-                let minerInstance = miner.addInstance(socket);
+                let minerInstance = miner.addInstance(socket, miner);
 
                 if (addresses.length > 0)
                     minerInstance.addresses = addresses;
@@ -371,7 +370,7 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
                     let newMiner = this.poolManagement.poolData.addMiner( newUnencodedAddress );
 
-                    minerInstance = newMiner.addInstance(socket);
+                    minerInstance = newMiner.addInstance(socket, newMiner);
                     socket.node.protocol.minerPool = newMiner;
 
                     miner = newMiner;
@@ -461,9 +460,8 @@ class PoolConnectedMinersProtocol extends PoolProtocolList{
 
     addElement(socket, minerInstance){
 
-        if (!PoolProtocolList.prototype.addElement.call(this, socket)){
+        if (!PoolProtocolList.prototype.addElement.call(this, socket) )
             minerInstance.dateActivity = new Date().getTime()/1000;
-        }
 
         minerInstance.socket = socket;
         this.poolManagement.poolData.connectedMinerInstances.addElement(minerInstance);
