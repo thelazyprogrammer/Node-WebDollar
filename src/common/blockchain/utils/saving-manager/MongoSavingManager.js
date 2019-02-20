@@ -27,7 +27,7 @@ const logger = winston.createLogger({
   level: 'info',
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: __filename + '.log' })
+    new winston.transports.File({ filename: '/tmp/mongodbsyncer.log' })
   ]
 });
 
@@ -721,7 +721,12 @@ class MongoSavingManager{
         number: decoded_block.number,
         hash: { $ne: decoded_block.hash }
       }).toArray()
-      if (badBlocks.length > 0) {
+      let badBlocksMiner = await blockChainDB.collection(mongodbBlockCollection).find({
+        number: decoded_block.number,
+        hash: decoded_block.hash,
+        miner: { $ne: decoded_block.miner }
+      }).toArray()
+      if (badBlocks.length > 0 || badBlocksMiner.length > 0) {
         logger.log({
           level: 'info',
           message: 'Removing bad blocks'
