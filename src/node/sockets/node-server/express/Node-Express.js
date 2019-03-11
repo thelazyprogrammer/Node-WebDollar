@@ -210,7 +210,17 @@ class NodeExpress{
             let merged = req.body ? Object.assign(req.params, req.body) : req.params;
 
             let answer = await callback(merged, res);
-            res.json(answer);
+            let cacheAge = 0
+            if (answer && answer.cache_age) {
+                cacheAge = answer.cache_age
+            }
+            let answerData = answer
+            if (answer && answer.data) {
+                answerData = answer.data
+            }
+
+            res.header("Cache-Control", "public, max-age=" + cacheAge)
+            res.json(answerData);
 
         } catch (exception){
             res.json({result:false, message: exception.message});

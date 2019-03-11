@@ -28,7 +28,10 @@ class NodeAPIPublicPools {
       stats.time_remaining = statistics.poolTimeRemaining;
     }
 
-    return stats;
+    return {
+        data: stats,
+        cache_age: 5
+    };
 
   }
 
@@ -57,7 +60,11 @@ class NodeAPIPublicPools {
       }
     }
 
-    return minerInstances;
+    return {
+        data: minerInstances,
+        cache_age: 40
+    };
+
   }
 
   minersAll(req, res) {
@@ -80,8 +87,10 @@ class NodeAPIPublicPools {
 
     });
 
-    return miners;
-
+    return {
+        data: miners,
+        cache_age: 100
+    }
   }
 
   poolData(req, res) {
@@ -136,7 +145,10 @@ class NodeAPIPublicPools {
 
     });
 
-    return poolData;
+    return {
+        data: poolData,
+        cache_age: 100
+    }
   }
 
 }
