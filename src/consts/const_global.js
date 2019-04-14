@@ -267,7 +267,7 @@ consts.SETTINGS = {
 
     NODE: {
 
-        VERSION: "1.211.4",
+        VERSION: "1.211.5",
 
         VERSION_COMPATIBILITY: "1.200.2",
         VERSION_COMPATIBILITY_POOL_MINERS: "1.200.1",
@@ -460,7 +460,7 @@ consts.TERMINAL_WORKERS = {
 };
 
 consts.JSON_RPC = {
-    version: '1.4.0',
+    version: '1.4.1',
     serverConfig: {
         host: process.env.JSON_RPC_SERVER_HOST || '127.0.0.1',
         port: process.env.JSON_RPC_SERVER_PORT,

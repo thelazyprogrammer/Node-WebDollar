@@ -35,7 +35,7 @@ class InterfaceBlockchainBlock {
         this.hashChain = null;
         this.difficultyTarget = null; // difficulty set by Blockchain
 
-        this.height = (typeof height === "number" ? height : null); // index set by me
+        this.height = typeof height === "number" ? height : ( typeof height === "string" ? parseInt(height) : 0); // index set by me
 
         if (!blockValidation )
             blockValidation = this.blockchain.createBlockValidation();
@@ -245,7 +245,7 @@ class InterfaceBlockchainBlock {
             nonce: this.nonce,
             timeStamp: this.timeStamp,
             difficulty: this.difficultyTarget ? this.difficultyTarget.toString("hex") : '',
-            hash: this.hash.toString("hex"),
+            hash: this.hash ? this.hash.toString("hex"): "",
             hashChain: this.hashChain ? this.hashChain.toString("hex") : '',
         }
 
