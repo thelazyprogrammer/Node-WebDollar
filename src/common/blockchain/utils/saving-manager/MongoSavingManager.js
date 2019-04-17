@@ -487,7 +487,7 @@ function decodeRawBlock(block_id, block_hex, divide_amounts) {
           var OFFSET_TRX_PUB_KEY = OFFSET_32
           var OFFSET_TRX_SIGN = OFFSET_64
           var OFFSET_NUMBER = OFFSET_7
-
+          var trx_from_to_type = 'SISO'
           var trx_version = deserializeNumber(substr(block_hex, CURRENT_OFFSET, OFFSET_TRX_VERSION))
           CURRENT_OFFSET += OFFSET_TRX_VERSION
           // HARD FORK change for TRX NONCE
@@ -551,6 +551,10 @@ function decodeRawBlock(block_id, block_hex, divide_amounts) {
           var trx_to_length = deserializeNumber(substr(block_hex, CURRENT_OFFSET, OFFSET_TRX_LENGTH))
           CURRENT_OFFSET += OFFSET_TRX_LENGTH
 
+          if (trx_from_length === 1 && trx_to_length > 1) trx_from_to_type = 'SIMO'
+          if (trx_from_length > 1 && trx_to_length === 1) trx_from_to_type = 'MISO'
+          if (trx_from_length > 1 && trx_to_length > 1) trx_from_to_type = 'MIMO'
+
           var trxs_to = {
             'trxs': [],
             'address': [],
@@ -592,6 +596,7 @@ function decodeRawBlock(block_id, block_hex, divide_amounts) {
               'from_amount': trxs_from.amount,
               'to_amount': trxs_to.amount,
               'fee': fee,
+              'from_to_type': trx_from_to_type,
               'block_number': block_id,
               'timestamp': human_timestamp,
               'addresses': trx_addresses,
@@ -717,6 +722,16 @@ class MongoSavingManager{
     { type: 1 }
   )
 
+  await blockChainDB.collection(mongodbMTransactionCollection).createIndex(
+    { timestamp: 1 }
+  )
+  await blockChainDB.collection(mongodbMTransactionCollection).createIndex(
+    { from_to_type: 1 }
+  )
+  await blockChainDB.collection(mongodbMTransactionCollection).createIndex(
+    { addresses: 1 }
+  )
+
       await blockChainDB.createCollection(mongodbBlockUncleCollection)
 
       // DECODE RAW BLOCK
@@ -764,6 +779,9 @@ class MongoSavingManager{
                 block_number: full_trx.block_number,
                 address: trxs_from[j].trx_from_address,
                 type: 0,
+                addresses: full_trx.to.address,
+                timestamp: full_trx.timestamp,
+                from_to_type: full_trx.from_to_type,
                 nonce: full_trx.nonce,
                 amount: trxs_from[j].trx_from_amount,
               })
@@ -773,6 +791,9 @@ class MongoSavingManager{
                 block_number: full_trx.block_number,
                 address: trxs_to[j].trx_to_address,
                 type: 1,
+                addresses: full_trx.from.address,
+                timestamp: full_trx.timestamp,
+                from_to_type: full_trx.from_to_type,
                 nonce: full_trx.nonce,
                 amount: trxs_to[j].trx_to_amount,
               })
