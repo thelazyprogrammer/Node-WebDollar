@@ -1,8 +1,6 @@
 import MiningTransactionsSelector from "./transactions-selector/Mining-Transactions-Selector";
 import NodeBlockchainPropagation from "common/sockets/protocol/propagation/Node-Blockchain-Propagation";
 
-const BigInteger = require('big-integer');
-
 
 import consts from 'consts/const_global';
 import global from 'consts/global';
@@ -158,6 +156,8 @@ class InterfaceBlockchainMining extends  InterfaceBlockchainMiningBasic{
                 console.warn( "WebDollar Block was mined ", block.height ," nonce (", answer.nonce+")", "timestamp", block.timeStamp, answer.hash.toString("hex"), " reward", (block.reward / WebDollarCoins.WEBD), "WEBD", block.data.minerAddress.toString("hex"));
                 console.warn( "difficulty prev: ", block.difficultyTargetPrev.toString("hex") );
                 console.warn( "----------------------------------------------------------------------------");
+
+                this.blockchain.mining.timeMinedBlock = new Date().getTime();
 
                 //check if I mined all the last K blocks
                 let i = this.blockchain.blocks.length-1;
@@ -364,7 +364,8 @@ class InterfaceBlockchainMining extends  InterfaceBlockchainMiningBasic{
 
                 }
 
-                await this.blockchain.sleep(1000);
+                //less than 1 second to be sure I will mine the next time
+                await this.blockchain.sleep( 500 );
 
             }
 
