@@ -736,23 +736,13 @@ class MongoSavingManager{
 
       // DECODE RAW BLOCK
       let decoded_block = decodeRawBlock(key, data)
-      let badBlocks = await blockChainDB.collection(mongodbBlockCollection).find({
-        number: decoded_block.number,
-        hash: { $ne: decoded_block.hash }
+      let existentBlock = await blockChainDB.collection(mongodbBlockCollection).find({
+        number: decoded_block.number
       }).toArray()
-      let badBlocksMiner = await blockChainDB.collection(mongodbBlockCollection).find({
-        number: decoded_block.number,
-        hash: decoded_block.hash,
-        miner: { $ne: decoded_block.miner }
-      }).toArray()
-      if (badBlocks.length > 0 || badBlocksMiner.length > 0) {
-        let badBlockReason = 'new hash'
-        if (badBlocksMiner.length > 0) {
-          badBlockReason = 'new miner'
-        }
+      if (existentBlock.length > 0) {
         logger.log({
           level: 'info',
-          message: 'Removing bad block because it has a ' + badBlockReason + ": " + decoded_block.number
+          message: 'Removing existent block because it was forked: ' + decoded_block.number
         })
         await blockChainDB.collection(mongodbBlockCollection).deleteMany({ number: decoded_block.number})
         await blockChainDB.collection(mongodbTransactionCollection).deleteMany({ block_number: decoded_block.number})
@@ -806,7 +796,7 @@ class MongoSavingManager{
       } else {
         logger.log({
           level: 'info',
-          message: 'Block ' + decoded_block.number + ' is already in the db'
+          message: 'Block ' + decoded_block.number + ' is already in the db. this is an error, as it should not happen.'
         });
       }
     } catch (ex) {
