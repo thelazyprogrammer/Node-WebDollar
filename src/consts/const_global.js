@@ -77,6 +77,8 @@ consts.BLOCKCHAIN = {
         TRANSACTIONS_INCLUDING_ONLY_HEADER: 567698, // SAME AS POS
         POS_ACTIVATION: 567810,
 
+        POS90_ACTIVATION: 1650000, //it needs to be % 30 === 0, better it should be % 100 = 0 && % 30 === 0
+
     }
 
 };
@@ -195,8 +197,6 @@ consts.HASH_ARGON2_PARAMS = {
     algoNode: 0,
     algoBrowser: 0,
     hashLen: 32,
-    // distPath: 'https://webdollar.io/public/WebDollar-dist/argon2'
-    distPath: 'https://antelle.net/argon2-browser/'
 };
 
 // change also to Browser-Mining-WebWorker.js
@@ -267,9 +267,9 @@ consts.SETTINGS = {
 
     NODE: {
 
-        VERSION: "1.211.5",
+        VERSION: "1.3.02",
 
-        VERSION_COMPATIBILITY: "1.200.2",
+        VERSION_COMPATIBILITY: "1.200.3",
         VERSION_COMPATIBILITY_POOL_MINERS: "1.200.1",
 
         VERSION_COMPATIBILITY_UPDATE: "",
