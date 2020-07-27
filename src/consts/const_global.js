@@ -455,7 +455,7 @@ consts.TERMINAL_WORKERS = {
 
     //  -100 no CPU mining
 
-    CPU_MAX: parseInt(process.env.TERMINAL_WORKERS_CPU_MAX) || 0, //for CPU-CPP use, 2x or even 3x threads
+    CPU_MAX: -100,//parseInt(process.env.TERMINAL_WORKERS_CPU_MAX) || 0, //for CPU-CPP use, 2x or even 3x threads
 
 };
 
