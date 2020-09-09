@@ -50,6 +50,7 @@ const TRX_NONCE_V2_BLOCK = 46950
 const GENESIS_ADDRESS_FORK = 'WEBD$gDZwjjD7ZE5+AE+44ITr8yo5E2aXYT3mEH$'
 const HARD_FORKS_WALLET_RECOVERY = 153060
 const HARD_FORKS_POS = 567810
+const HARD_FORKS_POS_90 = 1650000
 const GENESIS_AMOUNT_FORK = 18674856891922
 const GENESIS_ADDRESS_TIMESTAMP = 'Wed, 11 Jul 2018 11:19:52 GMT'
 
@@ -637,7 +638,10 @@ function decodeRawBlock(block_id, block_hex, divide_amounts) {
 }
 
 function isPoSBlock(blockId) {
-    return blockId % 30 < 20
+  if (blockId < HARD_FORKS_POS_90) {
+	        return blockId % 30 < 20
+	    }
+    return blockId % 100 < 90
 }
 
 class MongoSavingManager{
